@@ -76,6 +76,7 @@ return function(Vargs, GetEnv)
 		ScriptBuilder = {},
 		ScriptEditor = {},
 		CachedDonors = {},
+		webhookUrl = Settings.webhookUrl,
 		Aliases = {},
 		ReturnPoints = {},
 		BanMessage = "Banned",

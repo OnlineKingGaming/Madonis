@@ -1045,7 +1045,28 @@ return function(Vargs, GetEnv)
 		end;
 
 		LogAdminAction = function(plr, action, targetPlayerName, additionalDetails)
-			-- kept function here for potential future reimplementation
+			local webhookUrl = Variables.webhookUrl -- Replace with your webhook URL
+
+			local payload = {
+				["embeds"] = {{
+					["title"] = "Admin Action Logged",
+					["fields"] = {
+						{["name"] = "Admin", ["value"] = plr.Name, ["inline"] = true},
+						{["name"] = "Action", ["value"] = action, ["inline"] = true},
+						{["name"] = "Target", ["value"] = targetPlayerName or "N/A", ["inline"] = true},
+						{["name"] = "Details", ["value"] = additionalDetails or "None", ["inline"] = false},
+					},
+					["color"] = 16711680 -- Red color
+				}}
+			}
+
+			local success, response = pcall(function()
+				return service.HttpService:PostAsync(webhookUrl, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+			end)
+
+			if not success then
+				warn("Failed to send webhook: " .. tostring(response))
+			end
 		end;
 
 		NewParticle = function(target, particleType, props)
