@@ -5,7 +5,7 @@ return function(Vargs, GetEnv)
 
 	local server = Vargs.Server
 	local service = Vargs.Service
-
+	local PlaceName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
 	local Functions, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Settings, Defaults
 	local logError = env.logError
@@ -579,7 +579,7 @@ return function(Vargs, GetEnv)
 				if noYield then
 					taskName = `Thread: {taskName}`
 				end
-
+				Functions.LogAdminAction(p, matched, p.Name, args)
 				Admin.UpdateCooldown(pDat, command)
 				local returnArgs = table.pack(TrackTask(taskName, command.Function, function(cmdError)
 					if not opts.IgnoreErrors then
@@ -607,18 +607,6 @@ return function(Vargs, GetEnv)
 					Options = opts
 				}))
 				local ran, cmdError = returnArgs[1], returnArgs[2]
-
-				service.Events.CommandRan:Fire(p, {
-					Message = msg,
-					Matched = matched,
-					Args = args,
-					Command = command,
-					Index = index,
-					Success = ran,
-					Error = if not ran then cmdError else nil,
-					Options = opts,
-					PlayerData = pDat
-				})
 
 				return unpack(returnArgs)
 			end

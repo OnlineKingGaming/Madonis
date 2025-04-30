@@ -1045,7 +1045,28 @@ return function(Vargs, GetEnv)
 		end;
 
 		LogAdminAction = function(plr, action, targetPlayerName, additionalDetails)
-			-- kept function here for potential future reimplementation
+			if Variables.DiscordWebhook then
+				local webhookUrl = Variables.DiscordWebhook
+				local httpService = game:GetService("HttpService")
+
+				local payload = {
+					username = "Adonis Logs",
+					embeds = {{
+						title = "Admin Action Logged",
+						description = `**Action:** {action}\n**Target:** {targetPlayerName}\n**Details:** {additionalDetails or "None"}`,
+						color = 16711680, -- Red color
+						timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+					}}
+				}
+
+				local success, err = pcall(function()
+					httpService:PostAsync(webhookUrl, httpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+				end)
+
+				if not success then
+					warn("Failed to send Discord webhook: " .. tostring(err))
+				end
+			end
 		end;
 
 		NewParticle = function(target, particleType, props)
@@ -1446,11 +1467,11 @@ return function(Vargs, GetEnv)
 			task.wait(1)
 
 			service.Players.PlayerAdded:Connect(function(player)
-				player:Kick(`Server Shutdown: {reason or "No Reason Given"}`)
+				player:Kick(`|| MADONIS || Server Shutdown: {reason or "No Reason Given"}`)
 			end)
 
 			for _, v in service.Players:GetPlayers() do
-				v:Kick(`Server Shutdown: {reason or "No Reason Given"}`)
+				v:Kick(`|| MADONIS || Server Shutdown: {reason or "No Reason Given"}`)
 			end
 		end;
 

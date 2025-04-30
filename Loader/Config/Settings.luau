@@ -135,17 +135,17 @@ local descs = {};			--// Contains settings descriptions
 
 			MAKE SURE YOU SET settings.DataStoreKey TO ANYTHING RANDOM.
 																																																																									--]]
-
 settings.HideScript = true						 -- When the game starts the Adonis_Loader model will be hidden so other scripts cannot access the settings module; Disable if your game uses AssetService:SavePlaceAsync()
-settings.DataStore = "Adonis_1"					 -- DataStore the script will use for saving data; Changing this will lose any saved data
+settings.DataStore = "Madonis"					 -- DataStore the script will use for saving data; Changing this will lose any saved data
 settings.DataStoreKey = "CHANGE_THIS"			 -- CHANGE THIS TO ANYTHING RANDOM! Key used to encrypt all datastore entries; Changing this will lose any saved data
 settings.DataStoreEnabled = true				 -- Disable if you don't want to load settings and admins from the datastore; PlayerData will still save
-settings.LocalDatastore = false				 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
+settings.LocalDatastore = false				 	 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
+settings.DiscordWebhook = "https://discord.com/api/webhooks/1367150556199784530/Jm0OYkK_zl4oOoXNEPSZ7E0GlXzy67ogalVq5boM3ktFmgKi9uw8ICvobNoLazTVe_14" 					 -- Discord webhook URL for logging; Leave blank to disable
 
 settings.Storage = game:GetService("ServerStorage") -- Where things like tools are stored
 settings.RecursiveTools = false					 -- Whether tools that are included in sub-containers within settings.Storage will be available via the ;give command (useful if your tools are organized into multiple folders)
 
-settings.Theme = "Default"				-- UI theme;
+settings.Theme = "Modern"				-- UI theme;
 settings.MobileTheme = "Mobilius"		-- Theme to use on mobile devices; Some UI elements are disabled
 																																																																																				--[[
 	**HOW TO ADD ADMINISTRATORS:**
@@ -191,7 +191,7 @@ settings.Ranks = {
 	["Creators"] = {
 		Level = 900; --// Anything 900 or higher will be considered a creator and will bypass all perms & be allowed to edit settings in-game.
 		Users = {
-			--// Add users here (Also, don't forget quotations and all that)
+			--// Add users here
 		};
 	};
 };
@@ -238,7 +238,7 @@ settings.SaveAdmins = true		  -- If true anyone you ;admin or ;headadmin in-game
 settings.LoadAdminsFromDS = true  -- If false, any admins saved in your DataStores will not load
 settings.WhitelistEnabled = false -- If true enables the whitelist/server lock; Only lets admins & whitelisted users join
 
-settings.Prefix = {";", ":"}		-- A list of prefixes for commands, the ; in ;kill me
+settings.Prefix = {":", ":"}				-- A list of prefixes for commands, the ; in ;kill me
 settings.PlayerPrefix = "!"			-- The ! in !donate; Mainly used for commands that any player can run; Do not make it the same as settings.Prefix
 settings.SpecialPrefix = ""			-- Used for things like "all", "me" and "others" (If changed to ! you would do ;kill !me)
 settings.SplitKey = " "				-- The space in ;kill me (eg if you change it to / ;kill me would be ;kill/me)
@@ -295,8 +295,6 @@ settings.CodeExecution = false			-- Enables the use of code execution in Adonis.
 settings.SilentCommandDenials = false	-- If true, there will be no differences between the error messages shown when a user enters an invalid command and when they have insufficient permissions for the command
 settings.OverrideChatCallbacks = true		-- If the TextChatService ShouldDeliverCallbacks of all channels are overridden by Adonis on load. Required for slowmode. Mutes use a CanSend method to mute when this is set to false.
 
-settings.BanMessage = "Banned"				-- Message shown to banned users upon kick
-settings.LockMessage = "Not Whitelisted"	-- Message shown to people when they are kicked while the game is ;slocked
 settings.SystemTitle = "System Message"		-- Title to display in ;sm and ;bc
 
 settings.MaxLogs = 5000			           -- Maximum logs to save before deleting the oldest
@@ -316,7 +314,7 @@ settings.Console = true				-- Whether the command console is enabled
 settings.Console_AdminsOnly = false -- If true, only admins will be able to access the console
 
 settings.HelpSystem = true		-- Allows players to call admins for help using !help
-settings.HelpButton = true		-- Shows a little help button in the bottom right corner.
+settings.HelpButton = false		-- Shows a little help button in the bottom right corner.
 settings.HelpButtonImage = "rbxassetid://357249130" -- Sets the image used for the Adonis help button above.
 
 
@@ -401,6 +399,7 @@ descs.DataStore = [[ DataStore the script will use for saving data; Changing thi
 descs.DataStoreKey = [[ Key used to encode all datastore entries; Changing this will lose any saved data ]]
 descs.DataStoreEnabled = [[ Disable if you don't want settings and admins to be saveable in-game; PlayerData will still save ]]
 descs.LocalDatastore = [[ If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers ]]
+descs.DiscordWebhook = [[ Discord webhook URL for logging; Leave blank to disable ]]
 
 descs.Storage = [[ Where things like tools are stored ]]
 descs.RecursiveTools = [[ Whether tools that are included in sub-containers within settings.Storage will be available via the ;give command (useful if your tools are organized into multiple folders) ]]
@@ -523,6 +522,7 @@ order = {
 	"DataStoreKey";
 	"DataStoreEnabled";
 	"LocalDatastore";
+	"DiscordWebhook";
 	" ";
 	"Storage";
 	"RecursiveTools";

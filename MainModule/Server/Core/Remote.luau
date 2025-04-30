@@ -71,6 +71,7 @@ return function(Vargs, GetEnv)
 		--// Settings any client/user can grab
 		AllowedSettings = {
 			Theme = true;
+			DiscordWebhook = false;
 			MobileTheme = true;
 			DefaultTheme = true;
 			HelpButtonImage = true;
@@ -98,6 +99,7 @@ return function(Vargs, GetEnv)
 			Trello_Secondary = true;
 			Trello_Token = true;
 			Trello_AppKey = true;
+			DiscordWebhook = true;
 
 			HideScript = true;  -- Changing in-game will do nothing; Not able to be saved
 			DataStore = true;

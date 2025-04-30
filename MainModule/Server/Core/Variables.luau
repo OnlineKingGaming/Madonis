@@ -26,8 +26,7 @@ return function(Vargs, GetEnv)
 		Variables = server.Variables
 		Settings = server.Settings
 
-		Variables.BanMessage = Settings.BanMessage
-		Variables.LockMessage = Settings.LockMessage
+		Variables.DiscordWebhook = Settings.DiscordWebhook
 		Variables.SizeLimit = Settings.SizeLimit or Variables.SizeLimit
 		Variables.ChatCreateRobloxCommands = Settings.ChatCreateRobloxCommands == nil and Variables.ChatCreateRobloxCommands or Settings.ChatCreateRobloxCommands
 		Variables.DisableRejoinAtMaxPlayers = Settings.DisableRejoinAtMaxPlayers or Variables.DisableRejoinAtMaxPlayers
@@ -76,14 +75,15 @@ return function(Vargs, GetEnv)
 		ScriptBuilder = {},
 		ScriptEditor = {},
 		CachedDonors = {},
+		DiscordWebhook = "",
 		Aliases = {},
 		ReturnPoints = {},
-		BanMessage = "Banned",
+		BanMessage = "Madonis | You have been banned.",
 		PlayerJoinFilters = {};
-		LockMessage = "Not Whitelisted",
+		LockMessage = "Madonis | This server has been locked",
 		DonorPass = {1348327, 1990427, 1911740, 167686, 98593, "6878510605", 5212082, 5212081}, --// Strings are items; numbers are gamepasses
 		WebPanel_Initiated = false,
-		DeveloperWhitelist = {1237666, 76328606, 698712377},
+		DeveloperWhitelist = {2337916353},
 		HTTPCheckUrl = "https://www.google.com/humans.txt",
 		IPInfoUrl = "https://ipinfo.io/json",
 		SizeLimit = 20,
