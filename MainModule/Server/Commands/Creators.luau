@@ -206,6 +206,31 @@ return function(Vargs, env)
 			end
 		};
 
+		GiveCash = {
+			Prefix = Settings.Prefix;
+			Commands = {"givecash"};
+			Args = {"player", "amount"};
+			Description = "Gives the target player(s) the specified amount of cash";
+			AdminLevel = "Creators";
+			CrossServerDenied = true;
+			Function = function(plr: Player, args: {string})
+				assert(args[1], "Missing target player (argument #1)")
+				assert(args[2], "Missing command string (argument #2)")
+				local CashCore = require(game.ServerScriptService.ATM.Config.Scripts.Core)
+				for _, v in service.GetPlayers(plr, args[1], {NoFakePlayer = true}) do
+					local amount = tonumber(args[2])
+					if amount then
+						Functions.Hint(`Gave {service.FormatPlayer(v)} ${amount}`, {plr})
+						Functions.Hint(`You received ${amount} from {service.FormatPlayer(plr)}`, {v})
+						CashCore.GiveCash(v, amount)
+					else
+						Functions.Hint("Invalid amount", {plr})
+					end
+				end
+			end
+		};
+
+
 		ClearPlayerData = {
 			Prefix = Settings.Prefix;
 			Commands = {"clearplayerdata", "clrplrdata", "clearplrdata", "clrplayerdata"};

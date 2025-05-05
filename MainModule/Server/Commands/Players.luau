@@ -134,16 +134,16 @@ return function(Vargs, env)
 			end
 		};
 
-		Paint = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"paint", "canvas", "draw"};
-			Args = {};
-			Description = "Opens a canvas window for you to draw on";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "Paint", {})
-			end
-		};
+Paint = {
+	Prefix = Settings.PlayerPrefix;
+	Commands = {"paint", "canvas", "draw"};
+	Args = {};
+	Description = "Opens a canvas window for you to draw on";
+	AdminLevel = "Players";
+	Function = function(plr, args)
+		Remote.MakeGui(plr, "Paint", {})
+	end
+};
 
 		Prefix = {
 			Prefix = "!";

@@ -21,6 +21,7 @@ local CORE_LOADING_ORDER = table.freeze {
 	"Core";
 	"Remote";
 	"Process";
+	"Socket";
 
 	--// Misc
 	"Admin";
@@ -84,6 +85,7 @@ local SERVICES_WE_USE = table.freeze {
 	"RunService";
 	"InsertService";
 	"NetworkServer";
+	"TeleportService"
 }
 
 local unique = {}

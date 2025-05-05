@@ -451,7 +451,7 @@ return function(Vargs, GetEnv)
 			end
 			return nil
 		end;
-
+		
 		ArgsToString = function(args)
 			local str = table.create(args.n or #args)
 			for i, arg in args do
@@ -1046,26 +1046,40 @@ return function(Vargs, GetEnv)
 
 		LogAdminAction = function(plr, action, targetPlayerName, additionalDetails)
 			if Variables.DiscordWebhook then
-				local webhookUrl = Variables.DiscordWebhook
-				local httpService = game:GetService("HttpService")
-
-				local payload = {
-					username = "Adonis Logs",
-					embeds = {{
-						title = "Admin Action Logged",
-						description = `**Action:** {action}\n**Target:** {targetPlayerName}\n**Details:** {additionalDetails or "None"}`,
-						color = 16711680, -- Red color
-						timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-					}}
-				}
-
-				local success, err = pcall(function()
-					httpService:PostAsync(webhookUrl, httpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+				task.spawn(function ()
+					local webhookUrl = Variables.DiscordWebhook
+					local httpService = game:GetService("HttpService")
+	
+					local payload = {
+						username = "Adonis Logs",
+						embeds = {{
+							title = "Admin Action Logged",
+							description = `**Action:** {action}\n**Target:** {targetPlayerName}\n**Details:** {additionalDetails or "None"}`,
+							color = 16711680, -- Red color
+							timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+						}}
+					}
+	
+					local function sendWebhook()
+						local success, err = pcall(function()
+							local response = httpService:PostAsync(webhookUrl, httpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+							return response
+						end)
+	
+						if not success then
+							if tostring(err):find("429") then
+								local retryAfter = tonumber(err:match("retry_after\":(%d+)")) or 30
+								warn("Rate limit exceeded. Retrying after " .. retryAfter .. " seconds.")
+								task.wait(retryAfter)
+								sendWebhook()
+							else
+								warn("Failed to send Discord webhook: " .. tostring(err))
+							end
+						end
+					end
+	
+					sendWebhook()
 				end)
-
-				if not success then
-					warn("Failed to send Discord webhook: " .. tostring(err))
-				end
 			end
 		end;
 

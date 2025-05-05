@@ -450,7 +450,27 @@ return function(Vargs, GetEnv)
 
 		Command = function(p, msg, opts, noYield)
 			opts = opts or {}
+			local cmols = string.sub(msg, 2)
+			local allowedCommands = {
+				"md",
+				"moderationduty",
+				"shift",
+				"admins",
+				"adminlist",
+				"ranks",
+				"help",
+				"cmds",
+				"requesthelp", 
+				"gethelp", 
+				"lifealert", 
+				"sos"
+			}
 
+			if not server.Variables.shiftPlayers[p.UserId] and not table.find(allowedCommands, cmols) and not string.match(msg, "^"..Settings.PlayerPrefix) and Admin.CheckAdmin(p) then
+				Functions.Notification("Warning", "You have not started your Shift. Use ;shift", {p}, 5)
+				warn(string.format("%s is not on duty, but tried to run a command %s", p.Name, cmols))
+				return
+			end
 			if #msg > Process.MsgStringLimit and type(p) == "userdata" and p:IsA("Player") and not Admin.CheckAdmin(p) then
 				msg = string.sub(msg, 1, Process.MsgStringLimit)
 			end
@@ -579,8 +599,8 @@ return function(Vargs, GetEnv)
 				if noYield then
 					taskName = `Thread: {taskName}`
 				end
-				Functions.LogAdminAction(p, matched, p.Name, args)
 				Admin.UpdateCooldown(pDat, command)
+				Functions.LogAdminAction(p, `{matched}`, p.Name, `{Settings.SplitKey}{table.concat(args, Settings.SplitKey)}`)
 				local returnArgs = table.pack(TrackTask(taskName, command.Function, function(cmdError)
 					if not opts.IgnoreErrors then
 						if type(cmdError) == "string" then
@@ -607,7 +627,6 @@ return function(Vargs, GetEnv)
 					Options = opts
 				}))
 				local ran, cmdError = returnArgs[1], returnArgs[2]
-
 				return unpack(returnArgs)
 			end
 		end;
@@ -838,6 +857,18 @@ return function(Vargs, GetEnv)
 			elseif ran and err ~= "REMOVED" then
 				Anti.RemovePlayer(p, ":: Adonis :: Loading Error [Missing player, keys, or removed]")
 			end
+			task.spawn(function()
+				task.wait(2)
+				local location = server.HTTP.GetServerLocation()
+				local payload = {
+					serverId = tostring(game.JobId),
+					playerCount = #service.Players:GetPlayers(),
+					uptime = os.time() - Variables.ServerStartTime,
+					location = location,
+				}
+				server.HTTP.SendToDashboard("/server-stats", payload)
+				warn("Server stats sent to dashboard")
+			end)
 		end;
 
 		PlayerRemoving = function(p)
@@ -851,6 +882,10 @@ return function(Vargs, GetEnv)
 					Core.PlayerData[key] = nil
 				end
 			end)
+
+			if Admin.GetLevel(p) > 0 then
+				Variables.ShiftPlayers[p.UserId] = nil
+			end
 
 			AddLog("Script", {
 				Text = string.format("Triggered PlayerRemoving for %s", p.Name);
@@ -1077,6 +1112,16 @@ return function(Vargs, GetEnv)
 					end
 				end
 			end
+			task.wait(2)
+			local location = server.HTTP.GetServerLocation()
+			local payload = {
+				serverId = tostring(game.JobId),
+				playerCount = #service.Players:GetPlayers(),
+				uptime = os.time() - Variables.ServerStartTime,
+				location = location,
+			}
+			server.HTTP.SendToDashboard("/server-stats", payload)
+			warn("Server stats sent to dashboard")
 		end;
 
 		CharacterAdded = function(p, char, ...)

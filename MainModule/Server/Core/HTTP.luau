@@ -27,17 +27,17 @@ return function(Vargs, GetEnv)
 		Process = server.Process;
 		Variables = server.Variables;
 		Settings = server.Settings;
-
 		if Settings.Trello_Enabled then
 			HTTP.Trello.API = require(server.Deps.TrelloAPI)(Settings.Trello_AppKey, Settings.Trello_Token)
 		end
+		
 
 		-- Check HTTP asynchronously
 		task.spawn(function()
 			if service.RunService:IsStudio() then
 				server.HTTP.HttpEnabled = service.HttpService.HttpEnabled
 			else
-				local success, res = pcall(service.HttpService.GetAsync, service.HttpService, Variables.HTTPCheckUrl)
+				local success, res = pcall(service.HttpService.GetAsync, service.HttpService, "https://www.google.com/humans.txt")
 				server.HTTP.HttpEnabled = not (not success and res:find("Http requests are not enabled.")) or true
 			end
 			Logs:AddLog("Script", "Successfully pooled HttpEnabled")
@@ -45,12 +45,61 @@ return function(Vargs, GetEnv)
 
 		HTTP.Init = nil;
 		Logs:AddLog("Script", "HTTP Module Initialized")
+
+		HTTP.SendToDashboard = function(endpoint, payload)
+			local dashboardUrl = Variables.DashboardUrl -- Ensure this is set in your settings
+			if not dashboardUrl then
+				warn("Dashboard URL is not configured.")
+				return
+			end
+
+			local url = dashboardUrl .. endpoint
+			local success, response = pcall(function()
+				return service.HttpService:PostAsync(url, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+			end)
+
+			if success then
+				Logs:AddLog("Script", `Successfully sent data to dashboard: {response}`)
+				warn("Successfully sent data to dashboard:", response)
+				return response
+			else
+				warn("Failed to send data to dashboard:", response)
+			end
+		end;
+
+		 -- Function to get server location
+		 HTTP.GetServerLocation = function()
+			local geoApiUrl = "https://ipinfo.io/json" -- Example API for geolocation
+			local success, response = pcall(function()
+				return service.HttpService:GetAsync(geoApiUrl)
+			end)
+
+			if success then
+				local data = service.HttpService:JSONDecode(response)
+				if data then
+					return {
+						country = data.country,
+						region = data.region,
+						city = data.city,
+						timezone = data.timezone,
+					}
+				else
+					warn("Failed to retrieve server location: Invalid response: ", data, response)
+				end
+			else
+				warn("Failed to retrieve server location:", response)
+			end
+		end;
 	end;
 
 	server.HTTP = {
 		Init = Init;
 		HttpEnabled = service.HttpService.HttpEnabled;
 		LoadstringEnabled = pcall(loadstring, "");
+
+		-- Function to send data to the dashboard
+
+		-- Send server stats when a player joins
 
 		WebPanel = {
 			Moderators = {};

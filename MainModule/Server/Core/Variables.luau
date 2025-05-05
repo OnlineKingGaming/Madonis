@@ -28,7 +28,7 @@ return function(Vargs, GetEnv)
 
 		Variables.DiscordWebhook = Settings.DiscordWebhook
 		Variables.SizeLimit = Settings.SizeLimit or Variables.SizeLimit
-		Variables.ChatCreateRobloxCommands = Settings.ChatCreateRobloxCommands == nil and Variables.ChatCreateRobloxCommands or Settings.ChatCreateRobloxCommands
+		Variables.ChatCreateRobloxCommands = true
 		Variables.DisableRejoinAtMaxPlayers = Settings.DisableRejoinAtMaxPlayers or Variables.DisableRejoinAtMaxPlayers
 
 		for _, v in Settings.Cameras or {} do
@@ -76,7 +76,12 @@ return function(Vargs, GetEnv)
 		ScriptEditor = {},
 		CachedDonors = {},
 		DiscordWebhook = "",
+		serverId = "",
+		shiftPlayers = {},
+		peaceTimeActive = false,
+		peaceTimeEnd = nil,
 		Aliases = {},
+		ServerStartTime = os.time(),
 		ReturnPoints = {},
 		BanMessage = "Madonis | You have been banned.",
 		PlayerJoinFilters = {};
@@ -86,6 +91,7 @@ return function(Vargs, GetEnv)
 		DeveloperWhitelist = {2337916353},
 		HTTPCheckUrl = "https://www.google.com/humans.txt",
 		IPInfoUrl = "https://ipinfo.io/json",
+		DashboardUrl = "https://api.globaldevelopment.xyz/Madonis",
 		SizeLimit = 20,
 		ChatCreateRobloxCommands = true,
 		OriginalGravity = workspace.Gravity,

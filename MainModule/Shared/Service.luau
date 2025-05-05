@@ -1347,7 +1347,7 @@ return function(errorHandler, eventChecker, fenceSpecific, env)
 		OutfitCache = {},
 		UnallowedCache = {},
 		Insert = function(id, rawModel)
-			if service.UnallowedCache and service.UnallowedCache[id] then return end
+			--if service.UnallowedCache and service.UnallowedCache[id] then return end
 			local model = service.InsertService:LoadAsset(id)
 			if not rawModel and model:IsA("Model") and model.Name == "Model" then
 				local asset = model:GetChildren()[1]

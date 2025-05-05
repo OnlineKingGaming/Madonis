@@ -408,7 +408,7 @@ return function(Vargs, GetEnv)
 		UsernameCache = {};
 		GroupsCache = {};
 
-		BlankPrefix = false;
+		BlankPrefix = true;
 
 		--// How long admin levels will be cached (unless forcibly updated via something like :admin user)
 		AdminLevelCacheTimeout = 30;
@@ -422,22 +422,7 @@ return function(Vargs, GetEnv)
 		end,
 
 		DoHideChatCmd = function(p: Player, message: string, data: {[string]: any}?)
-			local pData = data or Core.GetPlayer(p)
-			if pData.Client.HideChatCommands then
-				if Admin.BlankPrefix and
-
-					(string.sub(message,1,1) ~= Settings.Prefix or string.sub(message,1,1) ~= Settings.PlayerPrefix or (type(Settings.Prefix) == "table" and not table.find(Settings.Prefix, string.sub(message,1,1)))) then
-					local isCMD = Admin.GetCommand(message)
-					if isCMD then
-						return true
-					else
-						return false
-					end
-				elseif (string.sub(message,1,1) == Settings.Prefix or string.sub(message,1,1) == Settings.PlayerPrefix or (type(Settings.Prefix) == "table" and table.find(Settings.Prefix, string.sub(message,1,1))))
-					and string.sub(message,2,2) ~= string.sub(message,1,1) then
-					return true;
-				end
-			end
+			return true;
 		end;
 
 		GetPlayerGroups = function(p: Player)
@@ -1211,7 +1196,7 @@ return function(Vargs, GetEnv)
 			Admin.PrefixCache = tempPrefix
 			Admin.CommandCache = tempTable
 
-			if Variables.ChatCreateRobloxCommands then
+			if true then
 				-- // Support for commands to be ran via TextChat
 				task.spawn(function()
 					local container = service.TextChatService.ChatVersion == Enum.ChatVersion.TextChatService and service.TextChatService:WaitForChild("TextChatCommands", 9e9)
@@ -1233,52 +1218,36 @@ return function(Vargs, GetEnv)
 						end
 
 						for name, data in Commands do
-							local command1, command2 = nil, nil
-
-							if type(data) ~= "table" or data.Hidden then
+							if type(data) ~= "table" then
 								continue
 							end
 
-							for _, v in data.Commands do
-								if type(data.Prefix) == "table" then
-									for _, p in data.Prefix do
-										if not blacklistedCommands["/"..p..v] then
-											if not command1 then
-												command1 = "/"..p..v
-											else
-												command2 = "/"..p..v
+							local registeredCommands = {}
+
+							for _, cmd in data.Commands do
+								local prefixes = type(data.Prefix) == "table" and data.Prefix or {data.Prefix}
+								for _, prefix in prefixes do
+									local fullCommand = prefix..cmd
+									if not blacklistedCommands[fullCommand] and not registeredCommands[fullCommand] then
+										registeredCommands[fullCommand] = true
+										local command = service.New("TextChatCommand")
+
+										command.Name = "Adonis_"..name.."_"..cmd
+										command.PrimaryAlias = fullCommand
+										command.SecondaryAlias = ""
+										command.Archivable = false
+										command:SetAttribute("AdminLevel", tonumber(data.AdminLevel) or data.AdminLevel or nil)
+										command.Parent = container
+										command.Triggered:Connect(function(textSource, text)
+											local player = service.Players:GetPlayerByUserId(textSource.UserId)
+
+											if player then
+												Functions.Notification("Notification", "Command Hidden", {player}, 5)
+												Process.Command(player, string.sub(text, 1))
 											end
-										end
+										end)
 									end
-								else
-									if not blacklistedCommands["/"..data.Prefix..v] then
-										if not command1 then
-											command1 = "/"..data.Prefix..v
-										else
-											command2 = "/"..data.Prefix..v
-										end
-									end
-
 								end
-
-							end
-
-							if command1 then
-								local command = service.New("TextChatCommand")
-
-								command.Name = "Adonis_"..name
-								command.PrimaryAlias = command1
-								command.SecondaryAlias = command2 or ""
-								command.Archivable = false
-								command:SetAttribute("AdminLevel", tonumber(data.AdminLevel) or data.AdminLevel or nil)
-								command.Parent = container
-								command.Triggered:Connect(function(textSource, text)
-									local player = service.Players:GetPlayerByUserId(textSource.UserId)
-
-									if player then
-										Process.Command(player, string.sub(text, 2))
-									end
-								end)
 							end
 						end
 					end
