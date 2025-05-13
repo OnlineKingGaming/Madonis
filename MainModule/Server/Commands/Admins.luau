@@ -1515,8 +1515,11 @@ return function(Vargs, env)
 				end
 
 				if TornadoEnabled == true then
+					if Admin.GetLevel(plr) < 1000 then
+						Functions.Hint("You do not have permission to use this weather type on an Active Hurricane", {plr})
+						return
+					end
 					game.Workspace:FindFirstChild("Tornado"):Destroy()
-					service.SoundService:FindFirstChild("ADONIS_SOUND_HURRICANE"):Destroy()
 					TornadoEnabled = false
 				end
 				if string.lower(args[1]) == "hurricane" then
@@ -1528,16 +1531,7 @@ return function(Vargs, env)
 					local Tornado = game.ReplicatedStorage:WaitForChild("Tornado"):Clone()
 					game.ReplicatedStorage:WaitForChild("WeatherResources"):WaitForChild("Settings"):WaitForChild("AdminEvent"):FireClient(plr, "Weather", "Strong Thunderstorms")
 					Tornado.Parent = game.Workspace
-					local s = service.New("Sound")
-					s.Name = "ADONIS_SOUND_HURRICANE"
-					s.SoundId = `http://www.roblox.com/asset/?id={895251438}`
-					s.Volume = 5
-					s.Pitch = 1
-					s.Looped = true
-					s.Archivable = false
-					s.Parent = service.SoundService
-					wait(0.5)
-					s:Play()
+					Functions.Hint("Hurricane spawned. Head to the Whitehouse to enable the siren.", {plr})
 				else
 					game.ReplicatedStorage:WaitForChild("WeatherResources"):WaitForChild("Settings"):WaitForChild("AdminEvent"):FireClient(plr, "Weather", WeatherType) --WeatherResources.Settings.AdminEvent:FireServer("Weather", WeatherType)
 				end

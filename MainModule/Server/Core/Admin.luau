@@ -973,6 +973,9 @@ return function(Vargs, GetEnv)
 		end;
 
 		AddBan = function(p, reason, doSave, moderator, banType)
+			if type(p) == "string" then
+				p = service.Players:FindFirstChild(p)
+			end
 			local value = {
 				Name = p.Name;
 				UserId = p.UserId;

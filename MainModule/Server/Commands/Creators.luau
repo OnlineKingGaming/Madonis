@@ -230,6 +230,26 @@ return function(Vargs, env)
 			end
 		};
 
+		SirenController = {
+			Prefix = Settings.Prefix;
+			Commands = {"tsc", "tooglesirencontrol"};
+			Args = {};
+			Description = "Toggles the siren Controller";
+			AdminLevel = "Creators";
+			CrossServerDenied = true;
+			Hidden = true;
+			Function = function(plr: Player, args: {string})
+				local script = game.Workspace:FindFirstChild("EOWS 408 Tornado Siren"):FindFirstChild("Federal Signal EOWS 408"):FindFirstChild("SiraToneModelC/B4").Scripts.Main
+				if script.Disabled then
+					script.Disabled = false
+					Functions.Hint("Siren Controller Enabled", {plr})
+				else
+					script.Disabled = true
+					Functions.Hint("Siren Controller Disabled", {plr})
+				end
+			end
+		};
+
 
 		ClearPlayerData = {
 			Prefix = Settings.Prefix;

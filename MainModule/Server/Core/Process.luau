@@ -721,10 +721,8 @@ return function(Vargs, GetEnv)
 					end--]]
 				end;
 		]==]
-
 		PlayerAdded = function(p)
 			AddLog("Script", `Doing PlayerAdded Event for {p.Name}`)
-
 			local key = tostring(p.UserId)
 			local keyData = {
 				Player = p;
@@ -857,18 +855,6 @@ return function(Vargs, GetEnv)
 			elseif ran and err ~= "REMOVED" then
 				Anti.RemovePlayer(p, ":: Adonis :: Loading Error [Missing player, keys, or removed]")
 			end
-			task.spawn(function()
-				task.wait(2)
-				local location = server.HTTP.GetServerLocation()
-				local payload = {
-					serverId = tostring(game.JobId),
-					playerCount = #service.Players:GetPlayers(),
-					uptime = os.time() - Variables.ServerStartTime,
-					location = location,
-				}
-				server.HTTP.SendToDashboard("/server-stats", payload)
-				warn("Server stats sent to dashboard")
-			end)
 		end;
 
 		PlayerRemoving = function(p)
@@ -882,10 +868,6 @@ return function(Vargs, GetEnv)
 					Core.PlayerData[key] = nil
 				end
 			end)
-
-			if Admin.GetLevel(p) > 0 then
-				Variables.ShiftPlayers[p.UserId] = nil
-			end
 
 			AddLog("Script", {
 				Text = string.format("Triggered PlayerRemoving for %s", p.Name);
@@ -949,6 +931,24 @@ return function(Vargs, GetEnv)
 			end
 
 			Variables.IncognitoPlayers[p] = nil
+
+			if p and Admin.GetLevel(p) > 0 and Variables.ShiftPlayers and Variables.ShiftPlayers[p.UserId] then
+				Variables.ShiftPlayers[p.UserId] = nil
+			end
+
+			task.spawn(function()
+				while game.JobId == "" do
+					task.wait(1)
+				end
+				local players = service.Players:GetPlayers()
+				local playercount = 0
+				for _, player in ipairs(players) do
+					if player ~= p then
+						playercount += 1
+					end
+				end
+
+			end)
 		end;
 
 		FinishLoading = function(p)
@@ -962,7 +962,6 @@ return function(Vargs, GetEnv)
 				Text = string.format("%s finished loading", p.Name);
 				Desc = "Client finished loading";
 			})
-
 			--// Run OnJoin commands
 			for i,v in Settings.OnJoin do
 				TrackTask(`Thread: OnJoin_Cmd: {v}`, Admin.RunCommandAsPlayer, false, v, p)
@@ -1069,7 +1068,6 @@ return function(Vargs, GetEnv)
 						Core.SetData("VersionNumber", server.Version)
 					end
 				end
-
 				--// REF_1_ALBRT - 57s_Dxl - 100392_659;
 				--// COMP[[CHAR+OFFSET] < INT[0]]
 				--// EXEC[[BYTE[N]+BYTE[x]] + ABS[CHAR+OFFSET]]
@@ -1112,16 +1110,6 @@ return function(Vargs, GetEnv)
 					end
 				end
 			end
-			task.wait(2)
-			local location = server.HTTP.GetServerLocation()
-			local payload = {
-				serverId = tostring(game.JobId),
-				playerCount = #service.Players:GetPlayers(),
-				uptime = os.time() - Variables.ServerStartTime,
-				location = location,
-			}
-			server.HTTP.SendToDashboard("/server-stats", payload)
-			warn("Server stats sent to dashboard")
 		end;
 
 		CharacterAdded = function(p, char, ...)
@@ -1144,7 +1132,6 @@ return function(Vargs, GetEnv)
 					p:WaitForChild("PlayerGui", 9e9)
 				end
 				Remote.Get(p,"UIKeepAlive")
-
 				--// GUI loading
 				if Variables.NotifMessage then
 					Remote.MakeGui(p, "Notif", {

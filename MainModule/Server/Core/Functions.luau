@@ -1477,7 +1477,7 @@ return function(Vargs, GetEnv)
 		end;
 
 		Shutdown = function(reason)
-			Functions.Message("Adonis", Settings.SystemTitle, "The server is shutting down...", "MatIcon://Warning", service.Players:GetPlayers(), false, 5)
+			Functions.Message("Madonis", Settings.SystemTitle, "The server is shutting down...", "MatIcon://Warning", service.Players:GetPlayers(), false, 5)
 			task.wait(1)
 
 			service.Players.PlayerAdded:Connect(function(player)
@@ -1525,7 +1525,7 @@ return function(Vargs, GetEnv)
 		CheckMatch = function(check, match)
 			if check == match then
 				return true
-			elseif type(check) == "table" and type(match) == "table" then
+			elseif _G.type(check) == "table" and _G.type(match) == "table" then
 				local good = false
 				local num = 0
 

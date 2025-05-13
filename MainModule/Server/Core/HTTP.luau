@@ -45,52 +45,7 @@ return function(Vargs, GetEnv)
 
 		HTTP.Init = nil;
 		Logs:AddLog("Script", "HTTP Module Initialized")
-
-		HTTP.SendToDashboard = function(endpoint, payload)
-			local dashboardUrl = Variables.DashboardUrl -- Ensure this is set in your settings
-			if not dashboardUrl then
-				warn("Dashboard URL is not configured.")
-				return
-			end
-
-			local url = dashboardUrl .. endpoint
-			local success, response = pcall(function()
-				return service.HttpService:PostAsync(url, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
-			end)
-
-			if success then
-				Logs:AddLog("Script", `Successfully sent data to dashboard: {response}`)
-				warn("Successfully sent data to dashboard:", response)
-				return response
-			else
-				warn("Failed to send data to dashboard:", response)
-			end
-		end;
-
-		 -- Function to get server location
-		 HTTP.GetServerLocation = function()
-			local geoApiUrl = "https://ipinfo.io/json" -- Example API for geolocation
-			local success, response = pcall(function()
-				return service.HttpService:GetAsync(geoApiUrl)
-			end)
-
-			if success then
-				local data = service.HttpService:JSONDecode(response)
-				if data then
-					return {
-						country = data.country,
-						region = data.region,
-						city = data.city,
-						timezone = data.timezone,
-					}
-				else
-					warn("Failed to retrieve server location: Invalid response: ", data, response)
-				end
-			else
-				warn("Failed to retrieve server location:", response)
-			end
-		end;
-	end;
+	end
 
 	server.HTTP = {
 		Init = Init;

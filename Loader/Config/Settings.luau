@@ -351,7 +351,7 @@ settings.Trello_HideRanks = false		-- If true, Trello-assigned ranks won't be sh
 -- _G API SETTINGS --
 ---------------------
 
-settings.G_API = true					-- If true, allows other server scripts to access certain functions described in the API module through _G.Adonis
+settings.G_API = false					-- If true, allows other server scripts to access certain functions described in the API module through _G.Adonis
 settings.G_Access = false				-- If enabled, allows other scripts to access Adonis using _G.Adonis.Access; Scripts will still be able to do things like _G.Adonis.CheckAdmin(player)
 settings.G_Access_Key = "Example_Key"	-- Key required to use the _G access API; Example_Key will not work for obvious reasons
 settings.G_Access_Perms = "Read" 		-- Access perms
