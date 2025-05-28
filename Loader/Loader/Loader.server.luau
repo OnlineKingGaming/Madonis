@@ -216,7 +216,6 @@ else
 			end)
 		end)
 	end
-
 	local response = assert(success and module, "FATAL ERROR! Adonis bootstrap function is missing!")(data)
 
 	if response == "SUCCESS" then

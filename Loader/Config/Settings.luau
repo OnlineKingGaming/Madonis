@@ -290,6 +290,8 @@ settings.CommandCooldowns = {
 ]]
 }
 
+settings.webhookUrl = ""
+
 settings.FunCommands = true				-- Are fun commands enabled?
 settings.PlayerCommands = true			-- Are player-level utility commands enabled?
 settings.AgeRestrictedCommands = true	-- Are age-locked commands enabled?
@@ -302,7 +304,9 @@ settings.CodeExecution = false			-- Enables the use of code execution in Adonis.
 settings.SilentCommandDenials = true	-- If true, there will be no differences between the error messages shown when a user enters an invalid command and when they have insufficient permissions for the command
 settings.OverrideChatCallbacks = true		-- If the TextChatService ShouldDeliverCallbacks of all channels are overridden by Adonis on load. Required for slowmode. Mutes use a CanSend method to mute when this is set to false.
 
-settings.SystemTitle = "System Message"		-- Title to display in ;sm and ;bc
+settings.BanMessage = "Madonis | You have been banned."				-- Message shown to banned users upon kick
+settings.LockMessage = "This Server is locked."	-- Message shown to people when they are kicked while the game is ;slocked
+settings.SystemTitle = "Madonis | System Message"		-- Title to display in ;sm and ;bc
 
 settings.MaxLogs = 5000			           -- Maximum logs to save before deleting the oldest
 settings.SaveCommandLogs = true	           -- If command logs are saved to the datastores
@@ -329,8 +333,8 @@ settings.HelpButtonImage = "rbxassetid://357249130" -- Sets the image used for t
 -- DONOR SETTINGS --
 --------------------
 
-settings.DonorCapes = true 		-- Donors get to show off their capes; Not disruptive :)
-settings.DonorCommands = true	-- Show your support for the script and let donors use harmless commands like !sparkles
+settings.DonorCapes = false 		-- Donors get to show off their capes; Not disruptive :)
+settings.DonorCommands = false	-- Show your support for the script and let donors use harmless commands like !sparkles
 settings.LocalCapes = false	 	-- Makes Donor capes local so only the donors see their cape [All players can still disable capes locally]
 
 
