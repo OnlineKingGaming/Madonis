@@ -1242,6 +1242,15 @@ return function(Vargs, GetEnv)
 			service.Events.NetworkRemoved:Fire(cli)
 		end;
 
+		game:BindToClose(function()
+				local payload = {
+					["Type"] = "Server Shutdown";
+					["Message"] = "Bye World!";
+				}
+				HTTP.socket:Send(service.HttpService:JSONEncode(payload)) -- Send a message to the server
+     		HTTP.socket:Disconnect("Server shutting down")
+		end)
+
 		--[[
 		PlayerTeleported = function(p,data)
 

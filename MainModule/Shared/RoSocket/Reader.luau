@@ -103,7 +103,7 @@ function Reader:Disconnect<T>(id: string?, ...: any?): boolean
 		return error(self:FormatText(`Failed to disconnect ID {tostring(id)} | Status Code {tostring(Response.StatusCode)}`))
 	end
 end
-function Reader:Send<T>(id: string?, message: string?, ...): boolean
+function Reader:Send<T>(id: string?, table, message: string?, ...): boolean
 	local Response : RequestResponse = HttpService:RequestAsync({
 		Url = `{SOCKET_SERVER_URL}{Dictionary.Send}`,
 		Method = "POST",
@@ -143,7 +143,7 @@ function Reader:Get<T>(id: string?, ...): any
 		end)
 
 		if DecodedSuccess == true then
-			return DecodedResult
+			return DecodedResult.message
 		elseif DecodedSuccess == false then
 			return error(self:FormatText(`Failed to decode response | Error {tostring(DecodedResult)}`))
 		end
@@ -167,7 +167,7 @@ function Reader:GetErrors<T>(id: string?, ...): any
 		end)
 
 		if DecodedSuccess == true then
-			return DecodedResult
+			return DecodedResult.message
 		elseif DecodedSuccess == false then
 			return error(self:FormatText(`Failed to decode response | Error {tostring(DecodedResult)}`))
 		end

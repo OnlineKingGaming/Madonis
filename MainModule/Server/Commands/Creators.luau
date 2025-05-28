@@ -212,11 +212,16 @@ return function(Vargs, env)
 			Args = {"player", "amount"};
 			Description = "Gives the target player(s) the specified amount of cash";
 			AdminLevel = "Creators";
+			Enabled = (game.ServerScriptService:FindFirstChild("ATM") and game.ServerScriptService.ATM:FindFirstChild("Config") and game.ServerScriptService.ATM.Config:FindFirstChild("Scripts") and game.ServerScriptService.ATM.Config.Scripts:FindFirstChild("Core")) and true or false;
 			CrossServerDenied = true;
 			Function = function(plr: Player, args: {string})
 				assert(args[1], "Missing target player (argument #1)")
 				assert(args[2], "Missing command string (argument #2)")
-				local CashCore = require(game.ServerScriptService.ATM.Config.Scripts.Core)
+				local success, CashCore = pcall(require, game.ServerScriptService.ATM.Config.Scripts.Core)
+				if not success or not CashCore then
+					Functions.Hint("Cash system is unavailable.", {plr})
+					return
+				end
 				for _, v in service.GetPlayers(plr, args[1], {NoFakePlayer = true}) do
 					local amount = tonumber(args[2])
 					if amount then

@@ -137,7 +137,7 @@ RoSocket.Connect = function(socket: string): (any?) -> (table)
 
 			tbl.UUID = uuid
 			tbl.Socket = data.Socket
-			tbl.Disconnect = function(...)
+			tbl.Disconnect = function(table, reason, ...)
 				if dis == true then
 					warn(Reader:FormatText("You cannot disconnect a disconnected socket!"))
 					return false
@@ -145,7 +145,7 @@ RoSocket.Connect = function(socket: string): (any?) -> (table)
 					local success = Reader:Disconnect(uuid)
 					Sockets[uuid] = nil
 					MaidSocket[uuid] = nil
-					tbl.OnDisconnect:Fire()
+					tbl.OnDisconnect:Fire(reason)
 					dis = true
 					return true
 				end

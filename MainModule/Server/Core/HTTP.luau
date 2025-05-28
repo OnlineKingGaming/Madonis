@@ -43,8 +43,85 @@ return function(Vargs, GetEnv)
 			Logs:AddLog("Script", "Successfully pooled HttpEnabled")
 		end)
 
-		HTTP.Init = nil;
 		Logs:AddLog("Script", "HTTP Module Initialized")
+		local RoSocket = require(server.Shared.RoSocket.RoSocket)
+		function ReconnectSocket ()
+			HTTP.socket = RoSocket("wss://madonis.globaldevelopment.xyz") -- Replace with your websocket link
+			if HTTP.socket then
+				HTTP.socket.OnMessageReceived:Connect(function(message)
+					print("Received message:", message)
+				end)
+
+				HTTP.socket.OnDisconnect:Connect(function(reason)
+					if reason == "Server shutting down" then
+						print("Server is shutting down, Socket will be closed")
+					else
+						print("Disconnected from server:", reason)
+						InitSocket()
+					end
+				end)
+
+				HTTP.socket.OnErrorReceived:Connect(function(errormsg)
+					print("Error received:", errormsg)
+				end)
+			else
+				warn("Failed to connect to WebSocket")
+			end
+		end
+		-- Example usage:
+		local InitSocket = task.spawn(function ()
+			HTTP.socket = RoSocket("wss://madonis.globaldevelopment.xyz") -- Replace with your websocket link
+			if HTTP.socket then
+				HTTP.socket.OnMessageReceived:Connect(function(message)
+					print("Received message:", message)
+				end)
+
+				HTTP.socket.OnDisconnect:Connect(function(reason)
+					if reason == "Server shutting down" then
+						print("Server is shutting down, Socket will be closed")
+					else
+						print("Disconnected from server:", reason)
+						ReconnectSocket()
+					end
+				end)
+
+				HTTP.socket.OnErrorReceived:Connect(function(errormsg)
+					print("Error received:", errormsg)
+					ReconnectSocket()
+				end)
+				while game.JobId == "" and service.RunService:IsStudio() == false do
+					task.wait(1)
+				end
+
+				local location = "NOT DEFINED"
+				local ip = "NOT DEFINED"
+					local success, response = pcall(function()
+						return service.HttpService:GetAsync("http://ip-api.com/json/")
+					end)
+					if success and response then
+						local data = service.HttpService:JSONDecode(response)
+						if data and data.city and data.country then
+							location = data.city .. ", " .. data.country
+						elseif data and data.country then
+							location = data.country
+						end
+						if data and data.query then
+							ip = data.query
+						end
+					end
+
+				local payload = {
+					["serverId"] = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
+					["playerCount"] = #service.Players:GetPlayers();
+					["location"] = location;
+					["gameId"] = game.gameId;
+					["ip"] = ip;
+				}
+				HTTP.socket:Send(service.HttpService:JSONEncode(payload)) -- Send a message to the server
+			else
+				warn("Failed to connect to WebSocket")
+			end
+		end)
 	end
 
 	server.HTTP = {

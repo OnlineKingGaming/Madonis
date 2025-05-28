@@ -495,7 +495,7 @@ return function(Vargs, env)
 			AdminLevel = "Admins";
 			Function = function(plr: Player, args: {string})
 				assert(args[3], "Missing state (argument #3)")
-				local enable = if args[3]:lower() == "on" or args[3]:lower() == "true" then true elseif args[3]:lower() == "off" or args[3]:lower() == "false" then false else nil
+				local enable = if args[3]:lower() == "on" or args[3]:lower() == "true" then true else (if args[3]:lower() == "off" or args[3]:lower() == "false" then false else nil)
 				assert(enable ~= nil, `Invalid state '{args[3]}'; please supply 'true' or 'false' (argument #3)`)
 				for _,v in service.GetPlayers(plr, args[1]) do
 					if string.lower(args[3]) == "on" or string.lower(args[3]) == "true" then
@@ -1473,8 +1473,10 @@ return function(Vargs, env)
 				end
 			end
 		};
-		
-		Weather = {
+		if game.ReplicatedStorage:FindFirstChild("WeatherResources")
+			and game.ReplicatedStorage.WeatherResources:FindFirstChild("Settings")
+			and game.ReplicatedStorage.WeatherResources.Settings:FindFirstChild("AdminEvent") then
+			return Weather = {
 			Prefix = Settings.Prefix;
 			Commands = {"wa", "setweather", "weatheradmin", "weather"};
 			Args = {"type"};
@@ -1537,6 +1539,7 @@ return function(Vargs, env)
 				end
 			end
 		};
+		end
 
 		PromptPremiumPurchase = {
 			Prefix = Settings.Prefix;
