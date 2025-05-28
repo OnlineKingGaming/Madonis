@@ -451,7 +451,7 @@ return function(Vargs, GetEnv)
 			end
 			return nil
 		end;
-
+		
 		ArgsToString = function(args)
 			local str = table.create(args.n or #args)
 			for i, arg in args do
@@ -1045,27 +1045,41 @@ return function(Vargs, GetEnv)
 		end;
 
 		LogAdminAction = function(plr, action, targetPlayerName, additionalDetails)
-			local webhookUrl = Variables.webhookUrl -- Replace with your webhook URL
-
-			local payload = {
-				["embeds"] = {{
-					["title"] = "Admin Action Logged",
-					["fields"] = {
-						{["name"] = "Admin", ["value"] = plr.Name, ["inline"] = true},
-						{["name"] = "Action", ["value"] = action, ["inline"] = true},
-						{["name"] = "Target", ["value"] = targetPlayerName or "N/A", ["inline"] = true},
-						{["name"] = "Details", ["value"] = additionalDetails or "None", ["inline"] = false},
-					},
-					["color"] = 16711680 -- Red color
-				}}
-			}
-
-			local success, response = pcall(function()
-				return service.HttpService:PostAsync(webhookUrl, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
-			end)
-
-			if not success then
-				warn("Failed to send webhook: " .. tostring(response))
+			if Variables.DiscordWebhook then
+				task.spawn(function ()
+					local webhookUrl = Variables.DiscordWebhook
+					local httpService = game:GetService("HttpService")
+	
+					local payload = {
+						username = "Adonis Logs",
+						embeds = {{
+							title = "Admin Action Logged",
+							description = `**Action:** {action}\n**Target:** {targetPlayerName}\n**Details:** {additionalDetails or "None"}`,
+							color = 16711680, -- Red color
+							timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+						}}
+					}
+	
+					local function sendWebhook()
+						local success, err = pcall(function()
+							local response = httpService:PostAsync(webhookUrl, httpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+							return response
+						end)
+	
+						if not success then
+							if tostring(err):find("429") then
+								local retryAfter = tonumber(err:match("retry_after\":(%d+)")) or 30
+								warn("Rate limit exceeded. Retrying after " .. retryAfter .. " seconds.")
+								task.wait(retryAfter)
+								sendWebhook()
+							else
+								warn("Failed to send Discord webhook: " .. tostring(err))
+							end
+						end
+					end
+	
+					sendWebhook()
+				end)
 			end
 		end;
 
@@ -1463,15 +1477,15 @@ return function(Vargs, GetEnv)
 		end;
 
 		Shutdown = function(reason)
-			Functions.Message("Adonis", Settings.SystemTitle, "The server is shutting down...", "MatIcon://Warning", service.Players:GetPlayers(), false, 5)
+			Functions.Message("Madonis", Settings.SystemTitle, "The server is shutting down...", "MatIcon://Warning", service.Players:GetPlayers(), false, 5)
 			task.wait(1)
 
 			service.Players.PlayerAdded:Connect(function(player)
-				player:Kick(`Server Shutdown: {reason or "No Reason Given"}`)
+				player:Kick(`|| MADONIS || Server Shutdown: {reason or "No Reason Given"}`)
 			end)
 
 			for _, v in service.Players:GetPlayers() do
-				v:Kick(`Server Shutdown: {reason or "No Reason Given"}`)
+				v:Kick(`|| MADONIS || Server Shutdown: {reason or "No Reason Given"}`)
 			end
 		end;
 
@@ -1511,7 +1525,7 @@ return function(Vargs, GetEnv)
 		CheckMatch = function(check, match)
 			if check == match then
 				return true
-			elseif type(check) == "table" and type(match) == "table" then
+			elseif _G.type(check) == "table" and _G.type(match) == "table" then
 				local good = false
 				local num = 0
 

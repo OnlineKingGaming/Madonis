@@ -21,6 +21,7 @@ local CORE_LOADING_ORDER = table.freeze {
 	"Core";
 	"Remote";
 	"Process";
+	"Socket";
 
 	--// Misc
 	"Admin";
@@ -84,6 +85,7 @@ local SERVICES_WE_USE = table.freeze {
 	"RunService";
 	"InsertService";
 	"NetworkServer";
+	"TeleportService"
 }
 
 local unique = {}
@@ -311,8 +313,8 @@ locals = {
 };
 
 
-  service = require(Folder.Shared.Shared.Service)(function(eType, msg, desc, ...)
-  local extra = table.pack(...)
+service = require(Folder.Parent.Shared.Service)(function(eType, msg, desc, ...)
+	local extra = table.pack(...)
 	if eType == "MethodError" then
 		if server and server.Logs and server.Logs.AddLog then
 			server.Logs.AddLog("Script", {
@@ -549,9 +551,8 @@ return service.NewProxy({
 			--script:Destroy() -- Unnecessary and potentially harmful?
 		end
 
-		--// Copy client themes, plugins and shared modules to the client folder
+		--// Copy client themes and plugins modules to the client folder
 		local packagesToRunWithPlugins = {}
-		Folder.Parent.Shared:Clone().Parent = server.Client
 
 		for _, module in ipairs(data.ClientPlugins or {}) do
 			if type(module) ~= "string" then

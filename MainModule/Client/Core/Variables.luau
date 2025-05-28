@@ -74,7 +74,7 @@ return function(Vargs, GetEnv)
 		UIKeepAlive = true;
 		KeybindsEnabled = true;
 		ParticlesEnabled = true;
-		CapesEnabled = true;
+		CapesEnabled = false;
 		HideChatCommands = true;
 		CanUseEditableImages = false; -- TODO: Pool from FFlag
 		Particles = {};

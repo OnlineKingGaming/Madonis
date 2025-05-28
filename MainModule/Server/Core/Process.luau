@@ -5,7 +5,7 @@ return function(Vargs, GetEnv)
 
 	local server = Vargs.Server
 	local service = Vargs.Service
-
+	local PlaceName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
 	local Functions, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Settings, Defaults
 	local logError = env.logError
@@ -450,7 +450,27 @@ return function(Vargs, GetEnv)
 
 		Command = function(p, msg, opts, noYield)
 			opts = opts or {}
+			local cmols = string.sub(msg, 2)
+			local allowedCommands = {
+				"md",
+				"moderationduty",
+				"shift",
+				"admins",
+				"adminlist",
+				"ranks",
+				"help",
+				"cmds",
+				"requesthelp", 
+				"gethelp", 
+				"lifealert", 
+				"sos"
+			}
 
+			if not server.Variables.shiftPlayers[p.UserId] and not table.find(allowedCommands, cmols) and not string.match(msg, "^"..Settings.PlayerPrefix) and Admin.CheckAdmin(p) then
+				Functions.Notification("Warning", "You have not started your Shift. Use ;shift", {p}, 5)
+				warn(string.format("%s is not on duty, but tried to run a command %s", p.Name, cmols))
+				return
+			end
 			if #msg > Process.MsgStringLimit and type(p) == "userdata" and p:IsA("Player") and not Admin.CheckAdmin(p) then
 				msg = string.sub(msg, 1, Process.MsgStringLimit)
 			end
@@ -579,8 +599,8 @@ return function(Vargs, GetEnv)
 				if noYield then
 					taskName = `Thread: {taskName}`
 				end
-
 				Admin.UpdateCooldown(pDat, command)
+				Functions.LogAdminAction(p, `{matched}`, p.Name, `{Settings.SplitKey}{table.concat(args, Settings.SplitKey)}`)
 				local returnArgs = table.pack(TrackTask(taskName, command.Function, function(cmdError)
 					if not opts.IgnoreErrors then
 						if type(cmdError) == "string" then
@@ -607,19 +627,6 @@ return function(Vargs, GetEnv)
 					Options = opts
 				}))
 				local ran, cmdError = returnArgs[1], returnArgs[2]
-
-				service.Events.CommandRan:Fire(p, {
-					Message = msg,
-					Matched = matched,
-					Args = args,
-					Command = command,
-					Index = index,
-					Success = ran,
-					Error = if not ran then cmdError else nil,
-					Options = opts,
-					PlayerData = pDat
-				})
-
 				return unpack(returnArgs)
 			end
 		end;
@@ -714,10 +721,8 @@ return function(Vargs, GetEnv)
 					end--]]
 				end;
 		]==]
-
 		PlayerAdded = function(p)
 			AddLog("Script", `Doing PlayerAdded Event for {p.Name}`)
-
 			local key = tostring(p.UserId)
 			local keyData = {
 				Player = p;
@@ -926,6 +931,24 @@ return function(Vargs, GetEnv)
 			end
 
 			Variables.IncognitoPlayers[p] = nil
+
+			if p and Admin.GetLevel(p) > 0 and Variables.ShiftPlayers and Variables.ShiftPlayers[p.UserId] then
+				Variables.ShiftPlayers[p.UserId] = nil
+			end
+
+			task.spawn(function()
+				while game.JobId == "" do
+					task.wait(1)
+				end
+				local players = service.Players:GetPlayers()
+				local playercount = 0
+				for _, player in ipairs(players) do
+					if player ~= p then
+						playercount += 1
+					end
+				end
+
+			end)
 		end;
 
 		FinishLoading = function(p)
@@ -939,7 +962,6 @@ return function(Vargs, GetEnv)
 				Text = string.format("%s finished loading", p.Name);
 				Desc = "Client finished loading";
 			})
-
 			--// Run OnJoin commands
 			for i,v in Settings.OnJoin do
 				TrackTask(`Thread: OnJoin_Cmd: {v}`, Admin.RunCommandAsPlayer, false, v, p)
@@ -1046,7 +1068,6 @@ return function(Vargs, GetEnv)
 						Core.SetData("VersionNumber", server.Version)
 					end
 				end
-
 				--// REF_1_ALBRT - 57s_Dxl - 100392_659;
 				--// COMP[[CHAR+OFFSET] < INT[0]]
 				--// EXEC[[BYTE[N]+BYTE[x]] + ABS[CHAR+OFFSET]]
@@ -1111,7 +1132,6 @@ return function(Vargs, GetEnv)
 					p:WaitForChild("PlayerGui", 9e9)
 				end
 				Remote.Get(p,"UIKeepAlive")
-
 				--// GUI loading
 				if Variables.NotifMessage then
 					Remote.MakeGui(p, "Notif", {
@@ -1221,6 +1241,15 @@ return function(Vargs, GetEnv)
 
 			service.Events.NetworkRemoved:Fire(cli)
 		end;
+
+		game:BindToClose(function()
+				local payload = {
+					["Type"] = "Server Shutdown";
+					["Message"] = "Bye World!";
+				}
+				HTTP.socket:Send(service.HttpService:JSONEncode(payload)) -- Send a message to the server
+     		HTTP.socket:Disconnect("Server shutting down")
+		end)
 
 		--[[
 		PlayerTeleported = function(p,data)

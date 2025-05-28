@@ -2,6 +2,7 @@
 return function(Vargs, env)
 	local server = Vargs.Server;
 	local service = Vargs.Service;
+	local TornadoEnabled = false
 
 	local Settings = server.Settings
 	local Functions, Commands, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Deps =
@@ -494,7 +495,7 @@ return function(Vargs, env)
 			AdminLevel = "Admins";
 			Function = function(plr: Player, args: {string})
 				assert(args[3], "Missing state (argument #3)")
-				local enable = if args[3]:lower() == "on" or args[3]:lower() == "true" then true elseif args[3]:lower() == "off" or args[3]:lower() == "false" then false else nil
+				local enable = if args[3]:lower() == "on" or args[3]:lower() == "true" then true else (if args[3]:lower() == "off" or args[3]:lower() == "false" then false else nil)
 				assert(enable ~= nil, `Invalid state '{args[3]}'; please supply 'true' or 'false' (argument #3)`)
 				for _,v in service.GetPlayers(plr, args[1]) do
 					if string.lower(args[3]) == "on" or string.lower(args[3]) == "true" then
@@ -555,7 +556,7 @@ return function(Vargs, env)
 			Commands = {"btools", "f3x", "buildtools", "buildingtools", "buildertools"};
 			Args = {"player"};
 			Description = "Gives the target player(s) F3X building tools.";
-			AdminLevel = "Admins";
+			AdminLevel = "Moderators";
 			Function = function(plr: Player, args: {string})
 				local F3X = Deps.Assets:FindFirstChild("F3X Deps") and (function(deps)
 					local F3X = service.New("Tool", {
@@ -1472,6 +1473,73 @@ return function(Vargs, env)
 				end
 			end
 		};
+		if game.ReplicatedStorage:FindFirstChild("WeatherResources")
+			and game.ReplicatedStorage.WeatherResources:FindFirstChild("Settings")
+			and game.ReplicatedStorage.WeatherResources.Settings:FindFirstChild("AdminEvent") then
+			return Weather = {
+			Prefix = Settings.Prefix;
+			Commands = {"wa", "setweather", "weatheradmin", "weather"};
+			Args = {"type"};
+			Description = `Changes the weather to the specified type`;
+			AdminLevel = "Admins";
+			Function = function(plr: Player, args: {string})
+				local Weather = {
+					"Auto",
+					"Sunny",
+					"Partly Cloudy",
+					"Mostly Cloudy",
+					"Cloudy",
+					"Drizzle",
+					"Freezing Drizzle",
+					"Flurries",
+					"Showers",
+					"Rain / Snow Showers",
+					"Snow Showers",
+					"Rain",
+					"Rain / Snow",
+					"Snow",
+					"Heavy Rain",
+					"Heavy Rain / Snow",
+					"Heavy Snow",
+					"Thunderstorms",
+					"Strong Thunderstorms",
+				}
+				local WeatherType
+				for _, weather in Weather do
+					if string.lower(weather) == string.lower(args[1]) then
+						WeatherType = weather
+						break
+					end
+				end
+				if WeatherType == nil and string.lower(args[1]) ~= "hurricane" then
+					Functions.Hint("Invalid weather type", {plr})
+					return
+				end
+
+				if TornadoEnabled == true then
+					if Admin.GetLevel(plr) < 1000 then
+						Functions.Hint("You do not have permission to use this weather type on an Active Hurricane", {plr})
+						return
+					end
+					game.Workspace:FindFirstChild("Tornado"):Destroy()
+					TornadoEnabled = false
+				end
+				if string.lower(args[1]) == "hurricane" then
+					if Admin.GetLevel(plr) < 1000 then
+						Functions.Hint("You do not have permission to use this weather type", {plr})
+						return
+					end
+					TornadoEnabled = true
+					local Tornado = game.ReplicatedStorage:WaitForChild("Tornado"):Clone()
+					game.ReplicatedStorage:WaitForChild("WeatherResources"):WaitForChild("Settings"):WaitForChild("AdminEvent"):FireClient(plr, "Weather", "Strong Thunderstorms")
+					Tornado.Parent = game.Workspace
+					Functions.Hint("Hurricane spawned. Head to the Whitehouse to enable the siren.", {plr})
+				else
+					game.ReplicatedStorage:WaitForChild("WeatherResources"):WaitForChild("Settings"):WaitForChild("AdminEvent"):FireClient(plr, "Weather", WeatherType) --WeatherResources.Settings.AdminEvent:FireServer("Weather", WeatherType)
+				end
+			end
+		};
+		end
 
 		PromptPremiumPurchase = {
 			Prefix = Settings.Prefix;

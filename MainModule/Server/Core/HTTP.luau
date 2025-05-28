@@ -27,30 +27,111 @@ return function(Vargs, GetEnv)
 		Process = server.Process;
 		Variables = server.Variables;
 		Settings = server.Settings;
-
 		if Settings.Trello_Enabled then
 			HTTP.Trello.API = require(server.Deps.TrelloAPI)(Settings.Trello_AppKey, Settings.Trello_Token)
 		end
+		
 
 		-- Check HTTP asynchronously
 		task.spawn(function()
 			if service.RunService:IsStudio() then
 				server.HTTP.HttpEnabled = service.HttpService.HttpEnabled
 			else
-				local success, res = pcall(service.HttpService.GetAsync, service.HttpService, Variables.HTTPCheckUrl)
+				local success, res = pcall(service.HttpService.GetAsync, service.HttpService, "https://www.google.com/humans.txt")
 				server.HTTP.HttpEnabled = not (not success and res:find("Http requests are not enabled.")) or true
 			end
 			Logs:AddLog("Script", "Successfully pooled HttpEnabled")
 		end)
 
-		HTTP.Init = nil;
 		Logs:AddLog("Script", "HTTP Module Initialized")
-	end;
+		local RoSocket = require(server.Shared.RoSocket.RoSocket)
+		function ReconnectSocket ()
+			HTTP.socket = RoSocket("wss://madonis.globaldevelopment.xyz") -- Replace with your websocket link
+			if HTTP.socket then
+				HTTP.socket.OnMessageReceived:Connect(function(message)
+					print("Received message:", message)
+				end)
+
+				HTTP.socket.OnDisconnect:Connect(function(reason)
+					if reason == "Server shutting down" then
+						print("Server is shutting down, Socket will be closed")
+					else
+						print("Disconnected from server:", reason)
+						InitSocket()
+					end
+				end)
+
+				HTTP.socket.OnErrorReceived:Connect(function(errormsg)
+					print("Error received:", errormsg)
+				end)
+			else
+				warn("Failed to connect to WebSocket")
+			end
+		end
+		-- Example usage:
+		local InitSocket = task.spawn(function ()
+			HTTP.socket = RoSocket("wss://madonis.globaldevelopment.xyz") -- Replace with your websocket link
+			if HTTP.socket then
+				HTTP.socket.OnMessageReceived:Connect(function(message)
+					print("Received message:", message)
+				end)
+
+				HTTP.socket.OnDisconnect:Connect(function(reason)
+					if reason == "Server shutting down" then
+						print("Server is shutting down, Socket will be closed")
+					else
+						print("Disconnected from server:", reason)
+						ReconnectSocket()
+					end
+				end)
+
+				HTTP.socket.OnErrorReceived:Connect(function(errormsg)
+					print("Error received:", errormsg)
+					ReconnectSocket()
+				end)
+				while game.JobId == "" and service.RunService:IsStudio() == false do
+					task.wait(1)
+				end
+
+				local location = "NOT DEFINED"
+				local ip = "NOT DEFINED"
+					local success, response = pcall(function()
+						return service.HttpService:GetAsync("http://ip-api.com/json/")
+					end)
+					if success and response then
+						local data = service.HttpService:JSONDecode(response)
+						if data and data.city and data.country then
+							location = data.city .. ", " .. data.country
+						elseif data and data.country then
+							location = data.country
+						end
+						if data and data.query then
+							ip = data.query
+						end
+					end
+
+				local payload = {
+					["serverId"] = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
+					["playerCount"] = #service.Players:GetPlayers();
+					["location"] = location;
+					["gameId"] = game.gameId;
+					["ip"] = ip;
+				}
+				HTTP.socket:Send(service.HttpService:JSONEncode(payload)) -- Send a message to the server
+			else
+				warn("Failed to connect to WebSocket")
+			end
+		end)
+	end
 
 	server.HTTP = {
 		Init = Init;
 		HttpEnabled = service.HttpService.HttpEnabled;
 		LoadstringEnabled = pcall(loadstring, "");
+
+		-- Function to send data to the dashboard
+
+		-- Send server stats when a player joins
 
 		WebPanel = {
 			Moderators = {};

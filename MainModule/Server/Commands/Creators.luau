@@ -206,6 +206,56 @@ return function(Vargs, env)
 			end
 		};
 
+		GiveCash = {
+			Prefix = Settings.Prefix;
+			Commands = {"givecash"};
+			Args = {"player", "amount"};
+			Description = "Gives the target player(s) the specified amount of cash";
+			AdminLevel = "Creators";
+			Enabled = (game.ServerScriptService:FindFirstChild("ATM") and game.ServerScriptService.ATM:FindFirstChild("Config") and game.ServerScriptService.ATM.Config:FindFirstChild("Scripts") and game.ServerScriptService.ATM.Config.Scripts:FindFirstChild("Core")) and true or false;
+			CrossServerDenied = true;
+			Function = function(plr: Player, args: {string})
+				assert(args[1], "Missing target player (argument #1)")
+				assert(args[2], "Missing command string (argument #2)")
+				local success, CashCore = pcall(require, game.ServerScriptService.ATM.Config.Scripts.Core)
+				if not success or not CashCore then
+					Functions.Hint("Cash system is unavailable.", {plr})
+					return
+				end
+				for _, v in service.GetPlayers(plr, args[1], {NoFakePlayer = true}) do
+					local amount = tonumber(args[2])
+					if amount then
+						Functions.Hint(`Gave {service.FormatPlayer(v)} ${amount}`, {plr})
+						Functions.Hint(`You received ${amount} from {service.FormatPlayer(plr)}`, {v})
+						CashCore.GiveCash(v, amount)
+					else
+						Functions.Hint("Invalid amount", {plr})
+					end
+				end
+			end
+		};
+
+		SirenController = {
+			Prefix = Settings.Prefix;
+			Commands = {"tsc", "tooglesirencontrol"};
+			Args = {};
+			Description = "Toggles the siren Controller";
+			AdminLevel = "Creators";
+			CrossServerDenied = true;
+			Hidden = true;
+			Function = function(plr: Player, args: {string})
+				local script = game.Workspace:FindFirstChild("EOWS 408 Tornado Siren"):FindFirstChild("Federal Signal EOWS 408"):FindFirstChild("SiraToneModelC/B4").Scripts.Main
+				if script.Disabled then
+					script.Disabled = false
+					Functions.Hint("Siren Controller Enabled", {plr})
+				else
+					script.Disabled = true
+					Functions.Hint("Siren Controller Disabled", {plr})
+				end
+			end
+		};
+
+
 		ClearPlayerData = {
 			Prefix = Settings.Prefix;
 			Commands = {"clearplayerdata", "clrplrdata", "clearplrdata", "clrplayerdata"};

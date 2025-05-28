@@ -1790,14 +1790,14 @@ return function(Vargs, env)
 
 		AdminList = {
 			Prefix = Settings.Prefix;
-			Commands = {"admins", "adminlist", "headadmins", "owners", "moderators", "ranks"};
+			Commands = {"admins", "adminlist", "ranks"};
 			Args = {};
 			Description = "Shows you the list of admins, also shows admins that are currently in the server";
 			AdminLevel = "Moderators";
 			ListUpdater = function(plr: Player)
 				local RANK_DESCRIPTION_FORMAT = "Rank: %s; Level: %d"
 				local RANK_RICHTEXT = "<b><font color='rgb(77, 77, 255)'>%s (Level: %d)</font></b>"
-				local RANK_TEXT_FORMAT = "%s [%s]"
+				local RANK_TEXT_FORMAT = "%s [%s] [%s]"
 
 				local temptable = {}
 				local unsorted = {}
@@ -1807,8 +1807,15 @@ return function(Vargs, env)
 				for _, v in service.Players:GetPlayers() do
 					local level, rankName = Admin.GetLevel(v);
 					if level > 0 then
+						local ONSHIFT_VARIABLE = server.Variables.shiftPlayers[v.UserId]
+						local ONSHIFT = "<b><font color='rgb(255, 0, 0)'>OFF DUTY</font></b>"
+						if ONSHIFT_VARIABLE then
+							ONSHIFT = "<b><font color='rgb(0, 255, 0)'>ON DUTY</font></b>"
+						else
+							ONSHIFT = "<b><font color='rgb(255, 0, 0)'>OFF DUTY</font></b>"
+						end
 						table.insert(unsorted, {
-							Text = string.format(RANK_TEXT_FORMAT, service.FormatPlayer(v), (rankName or (`Level: {level}`)));
+							Text = string.format(RANK_TEXT_FORMAT, service.FormatPlayer(v), (rankName or (`Level: {level}`)), ONSHIFT);
 							Desc = string.format(RANK_DESCRIPTION_FORMAT, rankName or (level >= 1000 and "Place Owner") or "Unknown", level);
 							SortLevel = level;
 						})
@@ -2838,7 +2845,7 @@ return function(Vargs, env)
 						})
 						local name = service.New("TextLabel", {
 							Parent = frame,
-							Text = service.FormatPlayer(v),
+							Text = service.FormatPlayer(v) .. "\n"..v.Team.Name,
 							BackgroundTransparency = 1,
 							Font = Enum.Font.Arial,
 							TextColor3 = Color3.new(1, 1, 1),
@@ -6051,7 +6058,7 @@ return function(Vargs, env)
 					end
 				end
 
-				Functions.Hint("You are now flying - press E to toggle flight", service.GetPlayers(plr, args[1]), 10)
+				Functions.Notification("Notification", "You are now flying - press E to toggle flight", service.GetPlayers(plr, args[1]), 10)
 			end
 		};
 
@@ -6131,6 +6138,69 @@ return function(Vargs, env)
 							service.Debris:AddItem(Attachment,.1)
 						end
 					end)
+				end
+			end
+		};
+
+		PeaceTimer = {
+			Prefix = Settings.Prefix;
+			Commands = {"pt", "peacetime"};
+			Args = {"time"};
+			Description = "Enable or Disable Peacetime, Max is 10 Minutes.";
+			AdminLevel = "Moderators";
+			Function = function(plr: Player, args: {string})
+				local time = tonumber(args[1])
+				local peacetime = server.Variables.peaceTimeEnd
+				local peacetimeEnabled = server.Variables.peaceTimeActive
+				if not peacetimeEnabled then
+					if not time then return end
+					if time >= 601 then return end
+					Functions.Notify("Notification", `Peacetime has been enabled. End all Priorities. Do not start any chase.`, service.GetPlayers(), 10)
+					peacetimeEnabled = true
+					peacetime = time
+					pt = task.spawn(function()
+						while task.wait(1) do
+							if peacetimeEnabled then
+								peacetime = peacetime - 1
+								if peacetime <= 0 then
+									break
+								end
+								Functions.Hint(`Peacetime ends in {peacetime} seconds`, service.GetPlayers(), 1)
+						 	else
+								break
+					 		end
+						end
+					end)
+					ptend = task.spawn(function()
+						task.wait(time)
+						Functions.Notify("Notification", `Peacetime has been disabled.`, service.GetPlayers(), 10)
+						peacetimeEnabled = false
+						peacetime = nil
+					end)
+				else
+					peacetimeEnabled = false
+					peacetime = nil
+					task.cancel(ptend)
+					Functions.Notify("Notification", `Peacetime has been disabled.`, service.GetPlayers(), 10)
+				end
+			end
+		};
+
+		ModerationDuty = {
+			Prefix = Settings.Prefix;
+			Commands = {"moderationduty", "md", "shift"};
+			Args = {};
+			Description = "Toggles your Moderation Duty";
+			AdminLevel = "Moderators";
+			Function = function(plr: Player, args: {string})
+				local user = plr
+				local OnShift = server.Variables.shiftPlayers[user.UserId]
+				if OnShift then
+					server.Variables.shiftPlayers[user.UserId] = nil
+					Functions.Notify("Notification", `You are no longer on shift.`, {plr}, 10)
+				else
+					server.Variables.shiftPlayers[user.UserId] = true
+					Functions.Notify("Notification", "You are now on shift. Your activities are now being logged.", {plr}, 10)
 				end
 			end
 		};

@@ -135,12 +135,12 @@ local descs = {};			--// Contains settings descriptions
 
 			MAKE SURE YOU SET settings.DataStoreKey TO ANYTHING RANDOM.
 																																																																									--]]
-
 settings.HideScript = true						 -- When the game starts the Adonis_Loader model will be hidden so other scripts cannot access the settings module; Disable if your game uses AssetService:SavePlaceAsync()
 settings.DataStore = "Madonis"					 -- DataStore the script will use for saving data; Changing this will lose any saved data
 settings.DataStoreKey = "CHANGE_THIS"			 -- CHANGE THIS TO ANYTHING RANDOM! Key used to encrypt all datastore entries; Changing this will lose any saved data
 settings.DataStoreEnabled = true				 -- Disable if you don't want to load settings and admins from the datastore; PlayerData will still save
-settings.LocalDatastore = false				 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
+settings.LocalDatastore = false				 	 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
+settings.DiscordWebhook = "https://discord.com/api/webhooks/1367150556199784530/Jm0OYkK_zl4oOoXNEPSZ7E0GlXzy67ogalVq5boM3ktFmgKi9uw8ICvobNoLazTVe_14" 					 -- Discord webhook URL for logging; Leave blank to disable
 
 settings.Storage = game:GetService("ServerStorage") -- Where things like tools are stored
 settings.RecursiveTools = false					 -- Whether tools that are included in sub-containers within settings.Storage will be available via the ;give command (useful if your tools are organized into multiple folders)
@@ -170,28 +170,35 @@ settings.Ranks = {
 	["Moderators"] = {
 		Level = 100;
 		Users = {
-			--// Add users here
+			"Group:10268673:10"
 		};
 	};
 
 	["Admins"] = {
 		Level = 200;
 		Users = {
-			--// Add users here
+			"Group:10268673:234"
 		};
 	};
 
-	["HeadAdmins"] = {
+	["Team Member"] = {
 		Level = 300;
 		Users = {
-			--// Add users here
+			"Group:10268673:250"
 		};
 	};
 
-	["Creators"] = {
+	["Leadership"] = {
+		Level = 700;
+		Users = {
+			"Group:10268673:254"
+		};
+	};
+
+	["CEO"] = {
 		Level = 900; --// Anything 900 or higher will be considered a creator and will bypass all perms & be allowed to edit settings in-game.
 		Users = {
-			--// Add users here (Also, don't forget quotations and all that)
+			"Group:10268673:255"
 		};
 	};
 };
@@ -223,22 +230,22 @@ settings.Cameras = {
 settings.Banned = {}		-- List of people banned from the game 		  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
 settings.Muted = {}			-- List of people muted (cannot send chat messages)				 		  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
 settings.Blacklist = {}		-- List of people banned from running commands 	  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
-settings.Whitelist = {}		-- People who can join if whitelist enabled	  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
+settings.Whitelist = {"Group:10268673"}		-- People who can join if whitelist enabled	  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
 
 settings.MusicList = {} 	-- List of songs to appear in the ;musiclist	  Format: {{Name = "somesong", ID = 1234567}, {Name = "anotherone", ID = 1243562}}
 settings.CapeList = {}		-- List of capes							  Format: {{Name = "somecape", Material = "Fabric", Color = "Bright yellow", ID = 12345567, Reflectance = 1}; {etc more stuff here}}
 settings.InsertList = {} 	-- List of models to appear in the ;insertlist and can be inserted using ';insert <name>'	  Format: {{Name = "somemodel", ID = 1234567}; {Name = "anotherone", ID = 1243562}}
 settings.Waypoints = {}     -- List of waypoints you can teleport via ';to wp-WAYPOINTNAME' or ';teleport PLAYER tp.WAYPOINTNAME' Format {YOURNAME1 = Vector3.new(1,2,3), YOURNAME2 = Vector(231,666,999)}
 
-settings.OnStartup = {}		-- List of commands ran at server start								Format: {";notif TestNotif"}
+settings.OnStartup = {";lockmap"}		-- List of commands ran at server start								Format: {";notif TestNotif"}
 settings.OnJoin = {}		-- List of commands ran as player on join (ignores adminlevel)		Format: {";cmds"}
 settings.OnSpawn = {}		-- List off commands ran as player on spawn (ignores adminlevel)	Format: {"!fire Really red",";ff me"}
 
 settings.SaveAdmins = true		  -- If true anyone you ;admin or ;headadmin in-game will save
 settings.LoadAdminsFromDS = true  -- If false, any admins saved in your DataStores will not load
-settings.WhitelistEnabled = false -- If true enables the whitelist/server lock; Only lets admins & whitelisted users join
+settings.WhitelistEnabled = true -- If true enables the whitelist/server lock; Only lets admins & whitelisted users join
 
-settings.Prefix = {":"}		-- A list of prefixes for commands, the ; in ;kill me
+settings.Prefix = {";", ";"}				-- A list of prefixes for commands, the ; in ;kill me
 settings.PlayerPrefix = "!"			-- The ! in !donate; Mainly used for commands that any player can run; Do not make it the same as settings.Prefix
 settings.SpecialPrefix = ""			-- Used for things like "all", "me" and "others" (If changed to ! you would do ;kill !me)
 settings.SplitKey = " "				-- The space in ;kill me (eg if you change it to / ;kill me would be ;kill/me)
@@ -291,10 +298,10 @@ settings.AgeRestrictedCommands = true	-- Are age-locked commands enabled?
 settings.WarnDangerousCommand = false	-- Do dangerous commands ask for confirmation?
 settings.CommandFeedback = false		-- Should players be notified when commands with non-obvious effects are run on them?
 settings.CrossServerCommands = true		-- Are commands which affect more than one server enabled?
-settings.ChatCommands = true			-- If false you will not be able to run commands via the chat; Instead, you MUST use the console or you will be unable to run commands
+settings.ChatCommands = false			-- If false you will not be able to run commands via the chat; Instead, you MUST use the console or you will be unable to run commands
 settings.CreatorPowers = true			-- Gives me creator-level admin; This is strictly used for debugging; I can't debug without full access to the script
 settings.CodeExecution = false			-- Enables the use of code execution in Adonis. Scripting related (such as ;s) and a few other commands require this
-settings.SilentCommandDenials = false	-- If true, there will be no differences between the error messages shown when a user enters an invalid command and when they have insufficient permissions for the command
+settings.SilentCommandDenials = true	-- If true, there will be no differences between the error messages shown when a user enters an invalid command and when they have insufficient permissions for the command
 settings.OverrideChatCallbacks = true		-- If the TextChatService ShouldDeliverCallbacks of all channels are overridden by Adonis on load. Required for slowmode. Mutes use a CanSend method to mute when this is set to false.
 
 settings.BanMessage = "Madonis | You have been banned."				-- Message shown to banned users upon kick
@@ -311,10 +318,10 @@ settings.HiddenThemes = {}				   -- Hide themes from the theme selector tab insi
 settings.Messages = {}			           -- A list of notifications shown on join. Messages can either be strings or tables. Messages are shown to HeadAdmins+ by default but tables can define a different minimum level via .Level
 settings.AutoClean = false		           -- Will auto clean workspace of things like hats and tools
 settings.AutoCleanDelay = 60	           -- Time between auto cleans
-settings.AutoBackup = false 	           -- Run ;backupmap automatically when the server starts. To restore the map, run ;restoremap
+settings.AutoBackup = true 	           -- Run ;backupmap automatically when the server starts. To restore the map, run ;restoremap
 settings.ReJail = false			           -- If true then when a player rejoins they'll go back into jail. Or if the moderator leaves everybody gets unjailed
 
-settings.Console = false				-- Whether the command console is enabled
+settings.Console = true				-- Whether the command console is enabled
 settings.Console_AdminsOnly = true -- If true, only admins will be able to access the console
 
 settings.HelpSystem = true		-- Allows players to call admins for help using !help
@@ -348,7 +355,7 @@ settings.Trello_HideRanks = false		-- If true, Trello-assigned ranks won't be sh
 -- _G API SETTINGS --
 ---------------------
 
-settings.G_API = true					-- If true, allows other server scripts to access certain functions described in the API module through _G.Adonis
+settings.G_API = false					-- If true, allows other server scripts to access certain functions described in the API module through _G.Adonis
 settings.G_Access = false				-- If enabled, allows other scripts to access Adonis using _G.Adonis.Access; Scripts will still be able to do things like _G.Adonis.CheckAdmin(player)
 settings.G_Access_Key = "Example_Key"	-- Key required to use the _G access API; Example_Key will not work for obvious reasons
 settings.G_Access_Perms = "Read" 		-- Access perms
@@ -403,6 +410,7 @@ descs.DataStore = [[ DataStore the script will use for saving data; Changing thi
 descs.DataStoreKey = [[ Key used to encode all datastore entries; Changing this will lose any saved data ]]
 descs.DataStoreEnabled = [[ Disable if you don't want settings and admins to be saveable in-game; PlayerData will still save ]]
 descs.LocalDatastore = [[ If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers ]]
+descs.DiscordWebhook = [[ Discord webhook URL for logging; Leave blank to disable ]]
 
 descs.Storage = [[ Where things like tools are stored ]]
 descs.RecursiveTools = [[ Whether tools that are included in sub-containers within settings.Storage will be available via the ;give command (useful if your tools are organized into multiple folders) ]]
@@ -525,6 +533,7 @@ order = {
 	"DataStoreKey";
 	"DataStoreEnabled";
 	"LocalDatastore";
+	"DiscordWebhook";
 	" ";
 	"Storage";
 	"RecursiveTools";
