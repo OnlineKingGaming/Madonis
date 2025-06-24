@@ -94,7 +94,7 @@ return function(Vargs, GetEnv)
 		DashboardUrl = "https://madonis.globaldevelopment.xyz/api",
 		WebSocketUrl = "https://madonis.globaldevelopment.xyz/",
 		SizeLimit = 20,
-		ChatCreateRobloxCommands = true,
+		ChatCreateRobloxCommands = false,
 		OriginalGravity = workspace.Gravity,
 		DisableRejoinAtMaxPlayers = false,
 		DexNames = {"Dex_Explorer", "Dex_Client", "Dex_Intro", "Dex_MainMenu", "Dex_ExplorerSelections", "Dex_Context", "Dex_Window", "Dex_SidesGui", "Dex_BrickColor", "Dex_AboutWindow", "Dex_SettingsWindow"},

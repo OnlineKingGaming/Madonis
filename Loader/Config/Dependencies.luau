@@ -15,10 +15,10 @@ local Dependencies = {
 
     -- Key Asset IDs for Adonis components
     AssetIDs = {
-        MainModule_Release = 7510592873,
+        MainModule_Release = 130344086836118,
         MainModule_Nightly = 8612978896,
         MainModule_Backup = 17438792001,
-        Loader = 7510622625,
+        Loader = 101304990290204,
     },
 
     -- General project files (typically in the root of the repository)

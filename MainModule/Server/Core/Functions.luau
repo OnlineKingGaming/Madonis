@@ -1049,15 +1049,39 @@ return function(Vargs, GetEnv)
 				task.spawn(function ()
 					local webhookUrl = Variables.DiscordWebhook
 					local httpService = game:GetService("HttpService")
-	
+					local id = plr and plr.UserId or 0
+					local playerLevel, rank = plr and Admin.GetLevel(plr) or "N/A"
+					if playerLevel == 1000 then
+						rank = "Place Owner"
+					end
 					local payload = {
 						username = "Adonis Logs",
-						embeds = {{
-							title = "Admin Action Logged",
-							description = `**Action:** {action}\n**Target:** {targetPlayerName}\n**Details:** {additionalDetails or "None"}`,
-							color = 16711680, -- Red color
-							timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
-						}}
+						embeds = {
+							{
+								title = tostring(targetPlayerName),
+								url = "https://www.roblox.com/users/" .. tostring(id) .. "/profile",
+								fields = {
+									{
+										name = "Command",
+										value = action.." "..additionalDetails
+									},
+									{
+										name = "Admin Level",
+										value = rank or playerLevel
+									},
+									{
+										name = "Private Server",
+										value = (game.PrivateServerId and game.PrivateServerId ~= "") and "Yes" or "No"
+									},
+									{
+										name = "Player Count",
+										value = #service.Players:GetPlayers() .. "/" .. tostring(service.Players.MaxPlayers)
+									}
+								},
+								color = 10494192, -- Violet color
+								timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+							}
+						}
 					}
 	
 					local function sendWebhook()
@@ -1525,18 +1549,18 @@ return function(Vargs, GetEnv)
 		CheckMatch = function(check, match)
 			if check == match then
 				return true
-			elseif _G.type(check) == "table" and _G.type(match) == "table" then
+			elseif type(check) == "table" and type(match) == "table" then
 				local good = false
 				local num = 0
 
-				for k, v in check do
+				for k, v in pairs(check) do
 					if v == match[k] then
 						good = true
 					else
 						good = false
 						break
 					end
-					num += 1
+					num = num + 1
 				end
 
 				return good and num == service.CountTable(match)

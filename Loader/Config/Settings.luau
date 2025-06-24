@@ -136,11 +136,11 @@ local descs = {};			--// Contains settings descriptions
 			MAKE SURE YOU SET settings.DataStoreKey TO ANYTHING RANDOM.
 																																																																									--]]
 settings.HideScript = true						 -- When the game starts the Adonis_Loader model will be hidden so other scripts cannot access the settings module; Disable if your game uses AssetService:SavePlaceAsync()
-settings.DataStore = "Madonis"					 -- DataStore the script will use for saving data; Changing this will lose any saved data
-settings.DataStoreKey = "CHANGE_THIS"			 -- CHANGE THIS TO ANYTHING RANDOM! Key used to encrypt all datastore entries; Changing this will lose any saved data
+settings.DataStore = "Madonis_Admin_System"					 -- DataStore the script will use for saving data; Changing this will lose any saved data
+settings.DataStoreKey = "madonis_change_me"			 -- CHANGE THIS TO ANYTHING RANDOM! Key used to encrypt all datastore entries; Changing this will lose any saved data
 settings.DataStoreEnabled = true				 -- Disable if you don't want to load settings and admins from the datastore; PlayerData will still save
 settings.LocalDatastore = false				 	 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
-settings.DiscordWebhook = "https://discord.com/api/webhooks/1367150556199784530/Jm0OYkK_zl4oOoXNEPSZ7E0GlXzy67ogalVq5boM3ktFmgKi9uw8ICvobNoLazTVe_14" 					 -- Discord webhook URL for logging; Leave blank to disable
+settings.DiscordWebhook = "" 					 -- Discord webhook URL for logging; Leave blank to disable
 
 settings.Storage = game:GetService("ServerStorage") -- Where things like tools are stored
 settings.RecursiveTools = false					 -- Whether tools that are included in sub-containers within settings.Storage will be available via the ;give command (useful if your tools are organized into multiple folders)
@@ -170,35 +170,35 @@ settings.Ranks = {
 	["Moderators"] = {
 		Level = 100;
 		Users = {
-			"Group:10268673:10"
+			""
 		};
 	};
 
 	["Admins"] = {
 		Level = 200;
 		Users = {
-			"Group:10268673:234"
+			""
 		};
 	};
 
 	["Team Member"] = {
 		Level = 300;
 		Users = {
-			"Group:10268673:250"
+			""
 		};
 	};
 
 	["Leadership"] = {
 		Level = 700;
 		Users = {
-			"Group:10268673:254"
+			""
 		};
 	};
 
 	["CEO"] = {
 		Level = 900; --// Anything 900 or higher will be considered a creator and will bypass all perms & be allowed to edit settings in-game.
 		Users = {
-			"Group:10268673:255"
+			""
 		};
 	};
 };
@@ -230,7 +230,7 @@ settings.Cameras = {
 settings.Banned = {}		-- List of people banned from the game 		  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
 settings.Muted = {}			-- List of people muted (cannot send chat messages)				 		  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
 settings.Blacklist = {}		-- List of people banned from running commands 	  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
-settings.Whitelist = {"Group:10268673"}		-- People who can join if whitelist enabled	  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
+settings.Whitelist = {""}		-- People who can join if whitelist enabled	  Format: {"Username"; "Username:UserId"; UserId; "Group:GroupId:GroupRank"; "Group:GroupId"; "Item:ItemID"; "GamePass:GamePassID";}
 
 settings.MusicList = {} 	-- List of songs to appear in the ;musiclist	  Format: {{Name = "somesong", ID = 1234567}, {Name = "anotherone", ID = 1243562}}
 settings.CapeList = {}		-- List of capes							  Format: {{Name = "somecape", Material = "Fabric", Color = "Bright yellow", ID = 12345567, Reflectance = 1}; {etc more stuff here}}
@@ -243,7 +243,7 @@ settings.OnSpawn = {}		-- List off commands ran as player on spawn (ignores admi
 
 settings.SaveAdmins = true		  -- If true anyone you ;admin or ;headadmin in-game will save
 settings.LoadAdminsFromDS = true  -- If false, any admins saved in your DataStores will not load
-settings.WhitelistEnabled = true -- If true enables the whitelist/server lock; Only lets admins & whitelisted users join
+settings.WhitelistEnabled = false -- If true enables the whitelist/server lock; Only lets admins & whitelisted users join
 
 settings.Prefix = {";", ";"}				-- A list of prefixes for commands, the ; in ;kill me
 settings.PlayerPrefix = "!"			-- The ! in !donate; Mainly used for commands that any player can run; Do not make it the same as settings.Prefix
@@ -290,8 +290,6 @@ settings.CommandCooldowns = {
 ]]
 }
 
-settings.webhookUrl = ""
-
 settings.FunCommands = true				-- Are fun commands enabled?
 settings.PlayerCommands = true			-- Are player-level utility commands enabled?
 settings.AgeRestrictedCommands = true	-- Are age-locked commands enabled?
@@ -302,23 +300,23 @@ settings.ChatCommands = false			-- If false you will not be able to run commands
 settings.CreatorPowers = true			-- Gives me creator-level admin; This is strictly used for debugging; I can't debug without full access to the script
 settings.CodeExecution = false			-- Enables the use of code execution in Adonis. Scripting related (such as ;s) and a few other commands require this
 settings.SilentCommandDenials = true	-- If true, there will be no differences between the error messages shown when a user enters an invalid command and when they have insufficient permissions for the command
-settings.OverrideChatCallbacks = true		-- If the TextChatService ShouldDeliverCallbacks of all channels are overridden by Adonis on load. Required for slowmode. Mutes use a CanSend method to mute when this is set to false.
+settings.OverrideChatCallbacks = false		-- If the TextChatService ShouldDeliverCallbacks of all channels are overridden by Adonis on load. Required for slowmode. Mutes use a CanSend method to mute when this is set to false.
 
 settings.BanMessage = "Madonis | You have been banned."				-- Message shown to banned users upon kick
-settings.LockMessage = "This Server is locked."	-- Message shown to people when they are kicked while the game is ;slocked
+settings.LockMessage = "Madonis | This Server is locked."	-- Message shown to people when they are kicked while the game is ;slocked
 settings.SystemTitle = "Madonis | System Message"		-- Title to display in ;sm and ;bc
 
 settings.MaxLogs = 5000			           -- Maximum logs to save before deleting the oldest
 settings.SaveCommandLogs = true	           -- If command logs are saved to the datastores
 settings.Notification = true	           -- Whether or not to show the "You're an admin" and "Updated" notifications
 settings.SongHint = true		           -- Display a hint with the current song name and ID when a song is played via ;music
-settings.TopBarShift = false	           -- By default hints and notifications will appear from the top edge of the window. Set this to true if you don't want hints/notifications to appear in that region.
+settings.TopBarShift = true	           -- By default hints and notifications will appear from the top edge of the window. Set this to true if you don't want hints/notifications to appear in that region.
 settings.DefaultTheme = "Default"		   -- Theme to be used as a replacement for "Default". The new replacement theme can still use "Default" as its Base_Theme however any other theme that references "Default" as its redirects to this theme.
 settings.HiddenThemes = {}				   -- Hide themes from the theme selector tab inside the userpanel. Each theme name must be the specific name such as "Mobilius"
 settings.Messages = {}			           -- A list of notifications shown on join. Messages can either be strings or tables. Messages are shown to HeadAdmins+ by default but tables can define a different minimum level via .Level
 settings.AutoClean = false		           -- Will auto clean workspace of things like hats and tools
 settings.AutoCleanDelay = 60	           -- Time between auto cleans
-settings.AutoBackup = true 	           -- Run ;backupmap automatically when the server starts. To restore the map, run ;restoremap
+settings.AutoBackup = false 	           -- Run ;backupmap automatically when the server starts. To restore the map, run ;restoremap
 settings.ReJail = false			           -- If true then when a player rejoins they'll go back into jail. Or if the moderator leaves everybody gets unjailed
 
 settings.Console = true				-- Whether the command console is enabled
@@ -383,21 +381,21 @@ settings.Allowed_API_Calls = {
 
 --// IF YOU EXPERIENCE ISSUES WITH FALSE POSITIVES/RANDOM KICKING/CRASHING DISABLE ALL OF THESE!
 
-settings.AllowClientAntiExploit = false 	-- (Default: false) Allows use of client-sided anti exploit functionality if true
-settings.Detection = false					-- (Default: false) If true: enables built-in anti-exploit detections that do not have their own settings.
+settings.AllowClientAntiExploit = true 	-- (Default: false) Allows use of client-sided anti exploit functionality if true
+settings.Detection = true					-- (Default: false) If true: enables built-in anti-exploit detections that do not have their own settings.
 settings.CheckClients = true				-- (Default: true) 	Checks clients every minute or two to make sure they are still active.
 
 settings.ExploitNotifications = true        -- (Default: true)	Notify all moderators and higher-ups when a player is kicked or crashed from the AntiExploit.
-settings.CharacterCheckLogs = false			-- (Default: false)	If the character checks appear in exploit logs and exploit notifications.
-settings.AntiNoclip = false					-- (Default: false)	Attempts to detect noclipping and kills the player if found.
-settings.AntiRootJointDeletion = false		-- (Default: false)	Attempts to detect paranoid and kills the player if found.
-settings.AntiMultiTool = false 				-- (Default: false)	Prevents multitool and because of that many other exploits.
+settings.CharacterCheckLogs = true			-- (Default: false)	If the character checks appear in exploit logs and exploit notifications.
+settings.AntiNoclip = true					-- (Default: false)	Attempts to detect noclipping and kills the player if found.
+settings.AntiRootJointDeletion = true		-- (Default: false)	Attempts to detect paranoid and kills the player if found.
+settings.AntiMultiTool = true 				-- (Default: false)	Prevents multitool and because of that many other exploits.
 settings.AntiGod = false 					-- (Default: false)	If a player does not respawn when they should have they get respawned.
 
-settings.AntiSpeed = false 				-- (Default: false)	(Client-Sided) Attempts to detect speed exploits.
-settings.AntiBuildingTools = false		-- (Default: false)	(Client-Sided) Attempts to detect any HopperBin(s)/Building Tools added to the client.
-settings.AntiAntiIdle = false 			-- (Default: false)	(Client-Sided) Kick the player if they are using an anti-idle exploit. Highly useful for grinding/farming games.
-settings.ExploitGuiDetection = false 	-- (Default: false)	(Client-Sided) If any exploit GUIs are found in the CoreGui the exploiter gets kicked (If you use StarterGui:SetCore("SendNotification") with an image this will kick you).
+settings.AntiSpeed = true 				-- (Default: false)	(Client-Sided) Attempts to detect speed exploits.
+settings.AntiBuildingTools = true		-- (Default: false)	(Client-Sided) Attempts to detect any HopperBin(s)/Building Tools added to the client.
+settings.AntiAntiIdle = true 			-- (Default: false)	(Client-Sided) Kick the player if they are using an anti-idle exploit. Highly useful for grinding/farming games.
+settings.ExploitGuiDetection = true 	-- (Default: false)	(Client-Sided) If any exploit GUIs are found in the CoreGui the exploiter gets kicked (If you use StarterGui:SetCore("SendNotification") with an image this will kick you).
 
 ---------------------
 -- END OF SETTINGS --

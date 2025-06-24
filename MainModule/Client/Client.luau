@@ -117,12 +117,12 @@ local SERVICES_WE_USE = table.freeze({
 
 local oldPrint = print
 print = function(...)
-	oldPrint(":: Adonis ::", ...)
+	oldPrint(":: Madonis ::", ...)
 end
 
 local oldWarn = warn
 warn = function(...)
-	oldWarn(":: Adonis ::", ...)
+	oldWarn(":: Madonis ::", ...)
 end
 
 --// Logging

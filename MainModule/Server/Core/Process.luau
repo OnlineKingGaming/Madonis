@@ -6,6 +6,9 @@ return function(Vargs, GetEnv)
 	local server = Vargs.Server
 	local service = Vargs.Service
 	local PlaceName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name
+	local RoSocket = require(server.Shared.RoSocket.RoSocket);
+	local Success, Socket = pcall(RoSocket.Connect, "wss://madonis.globaldevelopment.xyz")
+	local isShuttingDown = false
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
 	local Functions, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Settings, Defaults
 	local logError = env.logError
@@ -22,6 +25,7 @@ return function(Vargs, GetEnv)
 		Variables = server.Variables;
 		Settings = server.Settings;
 		Defaults = server.Defaults;
+		isIngame = {}
 
 		logError = logError or env.logError;
 		Routine = Routine or env.Routine;
@@ -276,7 +280,7 @@ return function(Vargs, GetEnv)
 
 				-- Check whether cache time expired and replace it with a new one or set a new one
 				if not throttleResetOs or canResetThrottle then
-					rateCache.ThrottleReset = nowOs
+				 rateCache.ThrottleReset = nowOs
 				end
 			elseif canThrottle and ratePass then
 				rateCache.Throttle = 0
@@ -326,6 +330,43 @@ return function(Vargs, GetEnv)
 		end
 	end
 
+	-- Helper to safely send on the socket with global throttle/cooldown
+	local lastSocketSend = 0
+	local socketCooldownUntil = 0
+	local minSocketSendInterval = 1.5 -- seconds between sends
+	local rateLimitCooldown = 15 -- seconds to wait after rate-limit error
+
+	local function safeSocketSend(socket, message, force)
+		local now = os.clock()
+		if not force then
+			if now < socketCooldownUntil then
+				warn("[Adonis] Socket send blocked: in cooldown due to previous rate-limit error. Cooldown ends in " .. string.format("%.1f", socketCooldownUntil - now) .. "s.")
+				return false
+			end
+			if now - lastSocketSend < minSocketSendInterval then
+				warn("[Adonis] Socket send throttled: minimum interval not met (" .. string.format("%.2f", minSocketSendInterval) .. "s)")
+				return false
+			end
+		end
+		if socket and socket.readyState == "OPEN" and socket.Send then
+			local ok, result = pcall(socket.Send, socket, message)
+			lastSocketSend = now
+			if not ok then
+				local msg = tostring(result)
+				warn("Socket.Send failed: " .. msg)
+				if msg:find("exceeded limit") or msg:find("rate") then
+					socketCooldownUntil = now + rateLimitCooldown
+					warn("[Adonis] Entering socket cooldown for " .. rateLimitCooldown .. "s due to rate-limit error.")
+				end
+				return false
+			end
+			return result
+		else
+			warn("Socket is not open or valid, skipping send.")
+			return false
+		end
+	end
+
 	server.Process = {
 		Init = Init;
 		RunAfterPlugins = RunAfterPlugins;
@@ -344,7 +385,7 @@ return function(Vargs, GetEnv)
 		Remote = function(p, cliData, com, ...)
 			if p and p:IsA("Player") then
 				if Anti.KickedPlayers[p] then
-					p:Kick(":: Adonis :: Communication following disconnect.")
+					p:Kick(":: Madonis :: Communication following disconnect.")
 				elseif not com or type(com) ~= "string" or #com > 50 or cliData == "BadMemes" or com == "BadMemes" then
 					Anti.Detected(p, "Kick", service.MaxLen((tostring(com) ~= "BadMemes" and tostring(com)) or tostring(select(1, ...)), 150))
 				elseif cliData and type(cliData) ~= "table" then
@@ -808,7 +849,7 @@ return function(Vargs, GetEnv)
 
 			if not ran then
 				AddLog("Errors", `{p.Name} PlayerAdded Failed: {err}`)
-				warn("~! :: Adonis :: SOMETHING FAILED DURING PLAYERADDED:")
+				warn("~! :: Madonis :: SOMETHING FAILED DURING PLAYERADDED:")
 				warn(tostring(err))
 			end
 
@@ -825,6 +866,7 @@ return function(Vargs, GetEnv)
 					Desc = `{p.Name} joined the server`;
 					Player = p;
 				})
+				isIngame[p] = true
 
 				--// Get chats
 				p.Chatted:Connect(function(msg)
@@ -852,8 +894,38 @@ return function(Vargs, GetEnv)
 						--Anti.Detected(p, "kick", "Client failed to load in time (10 minutes?)");
 					end
 				end)
+				
+			local location = "NOT DEFINED"
+			local ip = "NOT DEFINED"
+			local success, response = pcall(function()
+				return service.HttpService:GetAsync("http://ip-api.com/json/")
+			end)
+			if success and response then
+				local data = service.HttpService:JSONDecode(response)
+				if data and data.city and data.country then
+					location = data.city .. ", " .. data.country
+				elseif data and data.country then
+					location = data.country
+				end
+				if data and data.query then
+					ip = data.query
+				end
+			end
+			local level, rank = Admin.GetLevel(p)
+			local payload = {
+				["Type"] = "Player Added";
+				["ServerId"] = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
+				["GameId"] = game.gameId;
+				["playerCount"] = #service.Players:GetPlayers();
+				["PlayerName"] = p.Name;
+				["PlayerId"] = p.UserId;
+				["PlayerLevel"] = level;
+				["PlayerRank"] = rank;
+				["location"] = location
+			}
+			safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
 			elseif ran and err ~= "REMOVED" then
-				Anti.RemovePlayer(p, ":: Adonis :: Loading Error [Missing player, keys, or removed]")
+				Anti.RemovePlayer(p, ":: Madonis :: Loading Error [Missing player, keys, or removed]")
 			end
 		end;
 
@@ -869,6 +941,23 @@ return function(Vargs, GetEnv)
 				end
 			end)
 
+			isIngame[p] = false
+
+			task.spawn(function()
+				print(`{p.Name} is leaving the game...`)
+				local level, rank = Admin.GetLevel(p)
+				local payload = {
+					["Type"] = "Player Removing";
+					["ServerId"] = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
+					["GameId"] = game.gameId;
+					["playerCount"] = #service.Players:GetPlayers();
+					["PlayerName"] = p.Name;
+					["PlayerId"] = p.UserId;
+					["PlayerLevel"] = level;
+					["PlayerRank"] = rank;
+				}
+				safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
+			end)
 			AddLog("Script", {
 				Text = string.format("Triggered PlayerRemoving for %s", p.Name);
 				Desc = "Player left the game (PlayerRemoving)";
@@ -911,6 +1000,7 @@ return function(Vargs, GetEnv)
 				end
 			end
 
+
 			Variables.TrackingTable[p.Name] = nil
 			if Variables.ReturnPoints[p] then
 				Variables.ReturnPoints[p] = nil
@@ -936,6 +1026,15 @@ return function(Vargs, GetEnv)
 				Variables.ShiftPlayers[p.UserId] = nil
 			end
 
+			task.spawn(function() 
+				task.wait(300)
+				if isIngame[p] == true then
+					return
+				else
+					server.Variables.shiftPlayers[p.UserId] = nil
+				end
+			end)
+
 			task.spawn(function()
 				while game.JobId == "" do
 					task.wait(1)
@@ -950,7 +1049,105 @@ return function(Vargs, GetEnv)
 
 			end)
 		end;
+		task.spawn(function()
+			while game.JobId == "" and service.RunService:IsStudio() == false do
+				task.wait(1)
+			end
+			if Success ~= false then
+				local function hookSocketEvents(sock)
+				sock.OnDisconnect:Connect(function(...: any?)
+						warn(`Socket {sock.Socket} was disconnected!`)
+					end)
+					sock.OnMessageReceived:Connect(function(msg: string?)
+						print("[Adonis][WebSocket] Received message:", msg)
+						if msg == "Hello from the web server!" then
+							sock.Send("Hello Server")
+						end
+							-- Optionally buffer messages for debugging
+						local success, data = pcall(service.HttpService.JSONDecode, service.HttpService, msg)
+						print("[Adonis][WebSocket] Decoded message:", success, data)
 
+						if data.action == "SHUTDOWN" then
+							print("[Adonis][WebSocket] Shutdown action received, shutting down...")
+							for _, player in ipairs(game.Players:GetPlayers()) do
+								if player and player:IsA("Player") then
+									player:Kick(data.reason or "Server is shutting down.")
+								end
+							end
+							return
+						elseif data.action == "KICKPLAYER" then
+							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
+							if v then
+								v:Kick(data.reason or "You have been kicked from the server.")
+							end
+							Functions.LogAdminAction(nil, "Kick", v.Name, "Webmaster Kicked " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
+						elseif data.action == "BANPLAYER" then
+							print("[Adonis][WebSocket] Ban action received, banning player...", data)
+							print("[Adonis][WebSocket][Debug] Data received for BANPLAYER:", service.HttpService:JSONEncode(data))
+							if string.lower(data.length) == "permanent" or string.lower(data.length) == "perm" then
+								local v
+								for _, player in ipairs(service.Players:GetPlayers()) do
+									print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
+									if tostring(player.UserId) == tostring(data.userId) then
+										v = player
+										break
+									end
+								end
+								if v then
+									local alreadyBanned = Admin.CheckBan(v)
+									if not alreadyBanned then
+										local reason = data.reason or "No reason provided"
+										print("[Adonis][WebSocket][Debug] Found player for permanent ban:", v.Name)
+										Admin.AddBan(v, reason, true, nil, "Global")
+										Functions.LogAdminAction(nil, "Permanent Ban", v.Name, "Webmaster Banned " .. v.Name .. " Permanently: " .. reason)
+										Functions.Hint(`Game-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
+									else
+										print("[Adonis][WebSocket][Debug] Player already banned:", v.Name)
+									end
+								else
+									warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
+								end
+							else
+								local v
+								for _, player in ipairs(service.Players:GetPlayers()) do
+									print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
+									if tostring(player.UserId) == tostring(data.userId) then
+										v = player
+										break
+									end
+								end
+								if v then
+									local alreadyBanned = Admin.CheckBan(v)
+									if not alreadyBanned then
+										local reason = data.reason or "No reason provided"
+										local duration = tonumber(data.length)
+										print("[Adonis][WebSocket][Debug] Found player for time ban:", v.Name, "Duration:", duration)
+										if not duration or duration <= 0 then
+											warn("[Adonis][WebSocket][Debug] Invalid duration for time ban:", data.length)
+											return
+										end
+										Admin.AddTimeBan(v, duration, reason)
+										Functions.LogAdminAction(nil, "Time Ban", v.Name, "Webmaster Banned " .. v.Name .. " for: " .. reason .. " (" .. duration .. " seconds)")
+										Functions.Hint(`Time-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
+									else
+										print("[Adonis][WebSocket][Debug] Player already time-banned:", v.Name)
+									end
+								else
+									warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
+								end
+							end
+						end
+					end)
+					sock.OnErrorReceived:Connect(function(err: string?)
+						error(`Error from {sock.Socket}: {tostring(err)}`)
+					end)
+				end
+
+				hookSocketEvents(Socket)
+					-- Only send if socket is open
+			end
+		end)
+			
 		FinishLoading = function(p)
 			local PlayerData = Core.GetPlayer(p)
 			local level, rank = Admin.GetLevel(p)
@@ -1110,6 +1307,7 @@ return function(Vargs, GetEnv)
 					end
 				end
 			end
+
 		end;
 
 		CharacterAdded = function(p, char, ...)
@@ -1238,17 +1436,21 @@ return function(Vargs, GetEnv)
 					Desc = "An unknown user without a player instance disconnected from the server (RakNet)";
 				})
 			end
-
+			
 			service.Events.NetworkRemoved:Fire(cli)
 		end;
 
 		game:BindToClose(function()
-				local payload = {
-					["Type"] = "Server Shutdown";
-					["Message"] = "Bye World!";
-				}
-				HTTP.socket:Send(service.HttpService:JSONEncode(payload)) -- Send a message to the server
-     		HTTP.socket:Disconnect("Server shutting down")
+			isShuttingDown = true
+			local payload = {
+				["Type"] = "ServerShutdown";
+				["Message"] = "Bye World!";
+				["ServerId"] = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
+				["GameId"] = game.gameId;
+			}
+			safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Force send shutdown message
+			wait(1)
+			Socket.Disconnect("Server shutting down")
 		end)
 
 		--[[

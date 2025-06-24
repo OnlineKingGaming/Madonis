@@ -129,11 +129,11 @@ local logError = function(plr, err)
 end
 
 local print = function(...)
-	print(":: Adonis ::", ...)
+	print(":: Madonis ::", ...)
 end
 
 local warn = function(...)
-	warn(":: Adonis ::", ...)
+	warn(":: Madonis ::", ...)
 end
 
 local function Pcall(func, ...)

@@ -2792,7 +2792,7 @@ return function(Vargs, env)
 
 		Track = {
 			Prefix = Settings.Prefix,
-			Commands = {"track", "trace", "find", "locate"},
+			Commands = {"track", "trace", "find", "locate", "roblox"},
 			Args = {"player", "persistent? (default: false)"},
 			Description = "Shows you where the target player(s) is/are",
 			AdminLevel = "Moderators",
@@ -2800,7 +2800,7 @@ return function(Vargs, env)
 				local plrChar = assert(plr.Character, "You don't have a character")
 				local plrHum = assert(plrChar:FindFirstChildOfClass("Humanoid"), "You don't have a humanoid")
 
-				local persistent = args[2] and (args[2]:lower() == "true" or args[2]:lower() == "yes")
+				local persistent = args[2] and (args[2]:lower() == "true" or args[2]:lower() == "yes") or true
 				if persistent and type(Variables.TrackingTable[plr.Name]) ~= "table" then
 					Variables.TrackingTable[plr.Name] = {}
 				end
@@ -2830,13 +2830,7 @@ return function(Vargs, env)
 							Adornee = head,
 							AlwaysOnTop = true,
 							StudsOffset = Vector3.new(0, 2, 0),
-							Size = UDim2.fromOffset(100, 40),
-						})
-						local beam = service.New("SelectionPartLasso", {
-							Parent = gui,
-							Part = rootPart,
-							Humanoid = plrHum,
-							Color3 = v.TeamColor.Color,
+							Size = UDim2.new(0, 200, 0, 80), -- Increased size for better visibility and consistency
 						})
 						local frame = service.New("Frame", {
 							Parent = gui,
@@ -2851,22 +2845,14 @@ return function(Vargs, env)
 							TextColor3 = Color3.new(1, 1, 1),
 							TextStrokeColor3 = Color3.new(0, 0, 0),
 							TextStrokeTransparency = 0,
-							Size = UDim2.new(1, 0, 0, 20),
+							Size = UDim2.new(1, 0, 0, 50),
 							TextScaled = true,
 							TextWrapped = true,
 						})
 
-						local arrow = name:Clone()
-						arrow.Position = UDim2.fromOffset(0, 20)
-						arrow.Text = "v"
-						arrow.Parent = frame
-
 						Remote.MakeLocal(plr, gui, false)
 
 						local charRemovingConn
-						local teamChangeConn = v:GetPropertyChangedSignal("TeamColor"):Connect(function()
-							beam.Color3 = v.TeamColor.Color
-						end)
 						local plrCharRemovingConn = plr.CharacterRemoving:Once(function()
 							Remote.RemoveLocal(plr, `{v.Name}_Tracker`)
 							teamChangeConn:Disconnect()
@@ -6010,6 +5996,7 @@ return function(Vargs, env)
 					Value = not args[3] or (args[3] and (string.lower(args[3]) == "true" or string.lower(args[3]) == "yes"));
 					Parent = scr;
 				})
+				
 
 				scr.Name = "ADONIS_FLIGHT"
 

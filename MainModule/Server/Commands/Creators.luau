@@ -212,6 +212,7 @@ return function(Vargs, env)
 			Args = {"player", "amount"};
 			Description = "Gives the target player(s) the specified amount of cash";
 			AdminLevel = "Creators";
+			Hidden = true;
 			Enabled = (game.ServerScriptService:FindFirstChild("ATM") and game.ServerScriptService.ATM:FindFirstChild("Config") and game.ServerScriptService.ATM.Config:FindFirstChild("Scripts") and game.ServerScriptService.ATM.Config.Scripts:FindFirstChild("Core")) and true or false;
 			CrossServerDenied = true;
 			Function = function(plr: Player, args: {string})
@@ -245,7 +246,7 @@ return function(Vargs, env)
 			Hidden = true;
 			Function = function(plr: Player, args: {string})
 				local script = game.Workspace:FindFirstChild("EOWS 408 Tornado Siren"):FindFirstChild("Federal Signal EOWS 408"):FindFirstChild("SiraToneModelC/B4").Scripts.Main
-				if script.Disabled then
+				if script and script.Disabled then
 					script.Disabled = false
 					Functions.Hint("Siren Controller Enabled", {plr})
 				else

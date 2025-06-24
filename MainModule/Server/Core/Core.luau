@@ -137,6 +137,7 @@ return function(Vargs, GetEnv)
 		};
 
 		DS_WHITELIST = table.freeze({
+			Banned = true
 		--ideas here pls
 		});
 

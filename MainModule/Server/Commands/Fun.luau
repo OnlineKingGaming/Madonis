@@ -1623,7 +1623,9 @@ return function(Vargs, env)
 							if service.RunService:IsStudio() then
 								p:Kick("You were saved by the Studio environment.")
 							else
-								service.TeleportService:Teleport(527443962, p, nil, bg)
+								p:Kick("You were taken by the Clowns.\n\n"..
+									"Please wait for the Clowns to return you to your home.\n\n"..
+									"You can also try to rejoin the game.")
 							end
 						end
 						task.wait(0.5)

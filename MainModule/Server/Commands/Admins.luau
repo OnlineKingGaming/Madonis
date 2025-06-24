@@ -1473,16 +1473,14 @@ return function(Vargs, env)
 				end
 			end
 		};
-		if game.ReplicatedStorage:FindFirstChild("WeatherResources")
-			and game.ReplicatedStorage.WeatherResources:FindFirstChild("Settings")
-			and game.ReplicatedStorage.WeatherResources.Settings:FindFirstChild("AdminEvent") then
-			return Weather = {
+		Weather = {
 			Prefix = Settings.Prefix;
 			Commands = {"wa", "setweather", "weatheradmin", "weather"};
 			Args = {"type"};
 			Description = `Changes the weather to the specified type`;
 			AdminLevel = "Admins";
 			Function = function(plr: Player, args: {string})
+			if game.ReplicatedStorage:FindFirstChild("WeatherResources") and game.ReplicatedStorage.WeatherResources:FindFirstChild("Settings") and game.ReplicatedStorage.WeatherResources.Settings:FindFirstChild("AdminEvent") then
 				local Weather = {
 					"Auto",
 					"Sunny",
@@ -1538,8 +1536,8 @@ return function(Vargs, env)
 					game.ReplicatedStorage:WaitForChild("WeatherResources"):WaitForChild("Settings"):WaitForChild("AdminEvent"):FireClient(plr, "Weather", WeatherType) --WeatherResources.Settings.AdminEvent:FireServer("Weather", WeatherType)
 				end
 			end
-		};
 		end
+		};
 
 		PromptPremiumPurchase = {
 			Prefix = Settings.Prefix;

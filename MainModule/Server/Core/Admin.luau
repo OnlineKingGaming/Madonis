@@ -37,8 +37,8 @@ return function(Vargs, GetEnv)
 
 			--// Support for modern TextChatService
 			if service.TextChatService and service.TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-				local function onNewTextchannel(textchannel: TextChannel)
-					AddLog("Script", `Connected to TextChannel: {textchannel.Name}`)
+				local function onNewTextchannel(textchannel)
+					AddLog("Script", "Connected to TextChannel: " .. textchannel.Name)
 
 					if Settings.OverrideChatCallbacks ~= false then --// Default to "on" this for all games
 						AddLog("Script", "Overriding ShouldDeliverCallback for " .. textchannel.Name)
@@ -57,25 +57,22 @@ return function(Vargs, GetEnv)
 								if not SenderPlayer then
 									return true
 								elseif Admin.DoHideChatCmd(SenderPlayer, chatMessage.Text) then -- // Hide chat commands?
-									return false
+									-- Only hide from others, still show to sender
+									return SenderPlayer == Receiver
 								elseif Admin.IsMuted(SenderPlayer) then -- // Mute handler
 									if IsOriginalSender then
-										server.Remote.Send(SenderPlayer, "Function", "DisplaySystemMessageInTextChat", nil, `<font color="rgb(130, 100, 130)">[Adonis Chat]: </font><b>You are muted!</b> Other players cannot see your messages.`)
+										server.Remote.Send(SenderPlayer, "Function", "DisplaySystemMessageInTextChat", nil, '<font color="rgb(130, 100, 130)">[Adonis Chat]: </font><b>You are muted!</b> Other players cannot see your messages.')
 									end
-
 									return false
 								elseif Admin.SlowMode and not Admin.CheckAdmin(SenderPlayer) and slowCache[SenderPlayer] and os.time() - slowCache[SenderPlayer] < Admin.SlowMode then
-									if IsOriginalSender then --// Only show this for the person sending! Hide for others, however
-										--Functions.Notification("You are chatting too fast!", string.format("[Adonis] :: Slow mode enabled! (%g second(s) remaining)", Admin.SlowMode - (os.time() - slowCache[SenderPlayer])), {SenderPlayer}, 10)
-
-										server.Remote.Send(SenderPlayer, "Function", "DisplaySystemMessageInTextChat", nil, `<font color="rgb(130, 100, 130)">[Adonis Chat]: </font><b>You are sending messages too fast! {string.format("(%g second(s) remaining)", Admin.SlowMode - (os.time() - slowCache[SenderPlayer]))}</b>`)
+									if IsOriginalSender then
+										server.Remote.Send(SenderPlayer, "Function", "DisplaySystemMessageInTextChat", nil, string.format('<font color="rgb(130, 100, 130)">[Adonis Chat]: </font><b>You are sending messages too fast! (%g second(s) remaining)</b>', Admin.SlowMode - (os.time() - slowCache[SenderPlayer])))
 									end
-
 									return false
 								end
 
 								if Variables.DisguiseBindings[SenderId] then -- // Disguise command handler
-									chatMessage.PrefixText = Variables.DisguiseBindings[SenderId].TargetUsername..":"
+									chatMessage.PrefixText = Variables.DisguiseBindings[SenderId].TargetUsername .. ":"
 								end
 
 								if Admin.SlowMode and IsOriginalSender then
@@ -86,9 +83,9 @@ return function(Vargs, GetEnv)
 							return true
 						end
 					else
-						AddLog("Script", `Using the 'CanSend' method of handling chat connectivity in channel {textchannel.Name}`)
+						AddLog("Script", "Using the 'CanSend' method of handling chat connectivity in channel " .. textchannel.Name)
 						server.Variables.TextChatSpeakers = {}
-						local function AddUserToTextChatSpeakers(player: Player, speaker: TextSource)
+						local function AddUserToTextChatSpeakers(player, speaker)
 							if not server.Variables.TextChatSpeakers[player] then
 								server.Variables.TextChatSpeakers[player] = {}
 							end
@@ -99,7 +96,7 @@ return function(Vargs, GetEnv)
 								speaker.CanSend = false
 							end
 						end
-						local function SpeakerAdded(speaker: TextSource)
+						local function SpeakerAdded(speaker)
 							if speaker.UserId and speaker.UserId > 0 then
 								local Player = service.Players:GetPlayerByUserId(speaker.UserId)
 								if Player then
@@ -107,7 +104,7 @@ return function(Vargs, GetEnv)
 								end
 							end
 						end
-						local function SpeakerRemoved(speaker: TextSource)
+						local function SpeakerRemoved(speaker)
 							if speaker.UserId and speaker.UserId > 0 then
 								local Player = service.Players:GetPlayerByUserId(speaker.UserId)
 								local Tab = server.Variables.TextChatSpeakers[Player]
@@ -155,12 +152,11 @@ return function(Vargs, GetEnv)
 						local ModId = data.Moderator;
 
 						local Player = service.Players:GetPlayerByUserId(PlayerId)
-						--// Loop through CanSend of a speaker
-						for _,speakers : TextSource in if Player then server.Variables.TextChatSpeakers[Player] or {} else {} do
-							speakers.CanSend = false
-						end
 						if Player then
-							AddLog("Script", `Muted player {Player.Name}:{Player.UserId} using CanSend method`)
+							for _, speakers in ipairs(server.Variables.TextChatSpeakers[Player] or {}) do
+								speakers.CanSend = false
+							end
+							AddLog("Script", "Muted player " .. Player.Name .. ":" .. tostring(Player.UserId) .. " using CanSend method")
 						end
 					end)
 					service.Events.PlayerUnMuted:Connect(function(data)
@@ -168,17 +164,16 @@ return function(Vargs, GetEnv)
 						local ModId = data.Moderator;
 
 						local Player = service.Players:GetPlayerByUserId(PlayerId)
-						--// Loop through CanSend of a speaker
-						for _,speakers : TextSource in if Player then server.Variables.TextChatSpeakers[Player] or {} else {} do
-							local original = speakers:GetAttribute("OriginalCanSend")
-							speakers.CanSend = if original ~= nil then original else true
-						end
 						if Player then
-							AddLog("Script", `UnMuted player {Player.Name}:{Player.UserId} via CanSend method`)
+							for _, speakers in ipairs(server.Variables.TextChatSpeakers[Player] or {}) do
+								local original = speakers:GetAttribute("OriginalCanSend")
+								speakers.CanSend = (original ~= nil) and original or true
+							end
+							AddLog("Script", "UnMuted player " .. Player.Name .. ":" .. tostring(Player.UserId) .. " via CanSend method")
 						end
 					end)
 					service.Events.MutedPlayerChat_UnFiltered:Connect(function(p, ...)
-						server.Remote.Send(p, "Function", "DisplaySystemMessageInTextChat", nil, `<font color="rgb(130, 100, 130)">[Adonis Chat]: </font><b>You are muted!</b> Other players cannot see your messages.`)
+						server.Remote.Send(p, "Function", "DisplaySystemMessageInTextChat", nil, '<font color="rgb(130, 100, 130)">[Adonis Chat]: </font><b>You are muted!</b> Other players cannot see your messages.')
 					end)
 				end
 
@@ -973,28 +968,51 @@ return function(Vargs, GetEnv)
 		end;
 
 		AddBan = function(p, reason, doSave, moderator, banType)
+			print(p, doSave)
 			if type(p) == "string" then
 				p = service.Players:FindFirstChild(p)
 			end
 			local value = {
-				Name = p.Name;
-				UserId = p.UserId;
+				Name = p.Name or p;
+				UserId = p.UserId or service.Players:GetUserIdFromNameAsync(p);
 				Reason = reason;
 				Moderator = if moderator then service.FormatPlayer(moderator) else "%SYSTEM%";
 				BanType = banType
 			}
 
 			table.insert(Settings.Banned, value)
+			if string.lower(banType) == "global" then
+				local config: BanConfigType = {
+					UserIds = { p.UserId or service.Players:GetUserIdFromNameAsync(p) },
+					Duration = -1,
+					DisplayReason = reason,
+					PrivateReason = "This ban was made using Madonis. Moderator: " .. (moderator and service.FormatPlayer(moderator) or "%SYSTEM%"),
+					ExcludeAltAccounts = false,
+					ApplyToUniverse = true,
+				}
 
-			if doSave then
-				Core.DoSave({
-					Type = "TableAdd";
-					Table = "Banned";
-					Value = value;
-				})
+				local success, err = pcall(function()
+					return service.Players:BanAsync(config)
+				end)
 
-				Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
-			end
+				if doSave then
+					Core.DoSave({
+						Type = "TableAdd";
+						Table = "Banned";
+						Value = value;
+					})
+					--Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
+				end
+			else
+				if doSave then
+					Core.DoSave({
+						Type = "TableAdd";
+						Table = "Banned";
+						Value = value;
+					})
+
+					Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
+				end
 
 			if type(p) ~= "table" then
 				if not service.Players:FindFirstChild(p.Name) then
@@ -1003,14 +1021,17 @@ return function(Vargs, GetEnv)
 					if p then pcall(function() p:Kick(`{Variables.BanMessage} | Reason: {value.Reason or "No reason provided"}`) end) end
 				end
 			end
+			end
+				print(success, err)
 
 			service.Events.PlayerBanned:Fire(p, reason, doSave, moderator)
 		end;
 
 		AddTimeBan = function(p : Player | {[string]: any}, duration: number, reason: string, moderator: Player?)
+			print(p)
 			local value = {
-				Name = p.Name;
-				UserId = p.UserId;
+				Name = p.Name or p;
+				UserId = p.UserId or service.Players:GetUserIdFromNameAsync(p);
 				EndTime = os.time() + tonumber(duration);
 				Reason = reason;
 				Moderator = if moderator then service.FormatPlayer(moderator) else "%SYSTEM%";
@@ -1024,53 +1045,89 @@ return function(Vargs, GetEnv)
 				Value = value;
 			})
 
-			Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
+			--Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
 
 			if type(p) ~= "table" then
 				if not service.Players:FindFirstChild(p.Name) then
-					Remote.Send(p, "Function", "KillClient")
+					--Remote.Send(p, "Function", "KillClient")
 				else
-					if p then pcall(function() p:Kick(`{Variables.BanMessage} | Reason: {value.Reason or "No reason provided"}`) end) end
+					--if p then pcall(function() p:Kick(`{Variables.BanMessage} | Reason: {value.Reason or "No reason provided"}`) end) end
 				end
 			end
 
 			service.Events.PlayerBanned:Fire(p, reason, true, moderator)
+
+			local config: BanConfigType = {
+				UserIds = { p.UserId or service.Players:GetUserIdFromNameAsync(p) },
+				Duration = tonumber(duration),
+				DisplayReason = reason,
+				PrivateReason = "This ban was made using Madonis.",
+				ExcludeAltAccounts = false,
+				ApplyToUniverse = true,
+			}
+
+				local success, err = pcall(function()
+					return service.Players:BanAsync(config)
+				end)
+				print(success, err)
 		end,
 
 		DoBanCheck = function(name: string | number | Instance, check: string | {[string]: any})
+			print("[DoBanCheck] Called with:", name, check)
 			local id = type(name) == "number" and name
 
 			if type(name) == "userdata" and name:IsA("Player") then
 				id = name.UserId
 				name = name.Name
+				print("[DoBanCheck] name is Player instance. id:", id, "name:", name)
 			end
 
 			if type(check) == "table" then
+				print("[DoBanCheck] check is table:", check)
 				if type(name) == "string" and check.Name and string.lower(check.Name) == string.lower(name) then
+					print("[DoBanCheck] Name match:", check.Name, name)
 					return true
 				elseif id and check.UserId and check.UserId == id then
+					print("[DoBanCheck] UserId match:", check.UserId, id)
 					return true
 				end
 			elseif type(check) == "string" then
+				print("[DoBanCheck] check is string:", check)
 				local cName, cId = string.match(check, "(.*):(.*)")
 				if not cName and cId then cName = check end
 
 				if cName then
 					if string.lower(cName) == string.lower(name) then
+						print("[DoBanCheck] cName match:", cName, name)
 						return true
 					elseif id and cId and id == tonumber(cId) then
+						print("[DoBanCheck] cId match:", cId, id)
 						return true
 					end
 				else
-					return string.lower(tostring(check)) == string.lower(tostring(name))
+					local match = string.lower(tostring(check)) == string.lower(tostring(name))
+					print("[DoBanCheck] fallback string match:", check, name, match)
+					return match
 				end
 			end
 
+			print("[DoBanCheck] No match found.")
 			return false
 		end;
 
 		RemoveBan = function(name, doSave)
+			print(name)
 			local ret
+			local id = service.Players:GetUserIdFromNameAsync(tostring(name))
+			print(id)
+			local config: UnbanConfigType = {
+				UserIds = { id },
+				ApplyToUniverse = true,
+			}
+			local success, err = pcall(function()
+				return service.Players:UnbanAsync(config)
+			end)
+			print(success, err)
 			for i,v in Settings.Banned do
 				if Admin.DoBanCheck(name, v) then
 					ret = table.remove(Settings.Banned, i)
@@ -1082,6 +1139,7 @@ return function(Vargs, GetEnv)
 							LaxCheck = true;
 						})
 					end
+					
 				end
 			end
 			return ret

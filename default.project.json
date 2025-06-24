@@ -7,7 +7,7 @@
 		"ServerScriptService": {
 			"$className": "ServerScriptService",
 
-			"Madonis_Rojo": {
+			"Madonis": {
 				"$className": "Folder",
 				"MainModule": {
 					"$path": "MainModule"
@@ -17,6 +17,10 @@
 					"$path": "LICENSE.luau"
 				},
 				
+				"ThumbnailCamera": {
+					"$path": "ThumbnailCamera.rbxmx"
+				},
+
 				"Madonis_Loader": {
 					"$className": "Model",
 					"$path": "Loader",

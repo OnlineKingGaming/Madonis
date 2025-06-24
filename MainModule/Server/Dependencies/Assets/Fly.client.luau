@@ -13,11 +13,11 @@ local player = Players.LocalPlayer
 local char = player.Character
 
 local human = char:FindFirstChildOfClass("Humanoid")
-local bPos: AlignPosition = part:WaitForChild("ADONIS_FLIGHT_POSITION")
-local bGyro: AlignOrientation = part:WaitForChild("ADONIS_FLIGHT_GYRO")
+local bPos = part:WaitForChild("ADONIS_FLIGHT_POSITION")
+local bGyro = part:WaitForChild("ADONIS_FLIGHT_GYRO")
 
-local speedVal: NumberValue = script:WaitForChild("Speed")
-local noclip: BoolValue = script:WaitForChild("Noclip")
+local speedVal = script:WaitForChild("Speed")
+local noclip = script:WaitForChild("Noclip")
 local flying = true
 
 local dir = {}
@@ -25,11 +25,37 @@ local dir = {}
 local antiLoop, conn
 local Check, Start, Stop, Toggle, HandleInput, DPadifyInput
 
-local connections: {RBXScriptConnection} = {}
+local connections = {}
 
 function Check()
 	if script.Parent == part then
 		return true
+	end
+end
+
+local FLIGHT_ANIMATION_ID = 95790806252900
+local function playFlightAnimation()
+	local animator = human and (human:FindFirstChildOfClass("Animator") or human:WaitForChild("Animator", 2))
+	if animator then
+		for _, v in ipairs(animator:GetPlayingAnimationTracks()) do
+			if v.Animation.AnimationId == ("rbxassetid://"..FLIGHT_ANIMATION_ID) then v:Stop() end
+		end
+		local anim = Instance.new('Animation')
+		anim.AnimationId = "rbxassetid://"..FLIGHT_ANIMATION_ID
+		anim.Name = "ADONIS_Flight_Animation"
+		local track = animator:LoadAnimation(anim)
+		track:Play()
+	end
+end
+
+local function stopFlightAnimation()
+	local animator = human and (human:FindFirstChildOfClass("Animator") or human:WaitForChild("Animator", 2))
+	if animator then
+		for _, v in ipairs(animator:GetPlayingAnimationTracks()) do
+			if v.Animation.AnimationId == ("rbxassetid://"..FLIGHT_ANIMATION_ID) or v.Name == "ADONIS_Flight_Animation" then
+				v:Stop()
+			end
+		end
 	end
 end
 
@@ -63,6 +89,8 @@ function Start()
 		end)
 	end
 
+	playFlightAnimation()
+
 	while flying and antiLoop == antiReLoop do
 		if not Check() then
 			break
@@ -73,33 +101,33 @@ function Start()
 			curSpeed = 1
 		else
 			if dir.Up then
-				new *= CFrame.new(0, curSpeed, 0)
-				curSpeed += speedInc
+				new = new * CFrame.new(0, curSpeed, 0)
+				curSpeed = curSpeed + speedInc
 			end
 
 			if dir.Down then
-				new *= CFrame.new(0, -curSpeed, 0)
-				curSpeed += speedInc
+				new = new * CFrame.new(0, -curSpeed, 0)
+				curSpeed = curSpeed + speedInc
 			end
 
 			if dir.Forward then
-				new += camera.CFrame.LookVector * curSpeed
-				curSpeed += speedInc
+				new = new + camera.CFrame.LookVector * curSpeed
+				curSpeed = curSpeed + speedInc
 			end
 
 			if dir.Backward then
-				new -= camera.CFrame.LookVector * curSpeed
-				curSpeed += speedInc
+				new = new - camera.CFrame.LookVector * curSpeed
+				curSpeed = curSpeed + speedInc
 			end
 
 			if dir.Left then
-				new *= CFrame.new(-curSpeed, 0, 0)
-				curSpeed += speedInc
+				new = new * CFrame.new(-curSpeed, 0, 0)
+				curSpeed = curSpeed + speedInc
 			end
 
 			if dir.Right then
-				new *= CFrame.new(curSpeed, 0, 0)
-				curSpeed += speedInc
+				new = new * CFrame.new(curSpeed, 0, 0)
+				curSpeed = curSpeed + speedInc
 			end
 
 			if curSpeed > topSpeed then
@@ -127,15 +155,13 @@ end
 function Stop()
 	flying = false
 	human.PlatformStand = false
-
+	stopFlightAnimation()
 	if bPos then
 		bPos.MaxForce = 0
 	end
-
 	if bGyro then
 		bGyro.MaxTorque = 0
 	end
-
 	if conn and conn.Connected then
 		conn:Disconnect()
 	end
