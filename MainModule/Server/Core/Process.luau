@@ -921,7 +921,7 @@ return function(Vargs, GetEnv)
 				["PlayerId"] = p.UserId;
 				["PlayerLevel"] = level;
 				["PlayerRank"] = rank;
-				["location"] = location
+				["location"] = location;
 			}
 			safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
 			elseif ran and err ~= "REMOVED" then
@@ -1049,10 +1049,14 @@ return function(Vargs, GetEnv)
 
 			end)
 		end;
-		task.spawn(function()
-			while game.JobId == "" and service.RunService:IsStudio() == false do
-				task.wait(1)
-			end
+			
+		FinishLoading = function(p)
+			local PlayerData = Core.GetPlayer(p)
+			local level, rank = Admin.GetLevel(p)
+			local key = tostring(p.UserId)
+
+			function initSocket()
+			task.spawn(function()
 			if Success ~= false then
 				local function hookSocketEvents(sock)
 				sock.OnDisconnect:Connect(function(...: any?)
@@ -1077,7 +1081,9 @@ return function(Vargs, GetEnv)
 							return
 						elseif data.action == "KICKPLAYER" then
 							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
-							if v then
+							if not service.Players:FindFirstChild(v.Name) then
+								Remote.Send(v, "Function", "Kill")
+							else
 								v:Kick(data.reason or "You have been kicked from the server.")
 							end
 							Functions.LogAdminAction(nil, "Kick", v.Name, "Webmaster Kicked " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
@@ -1094,6 +1100,10 @@ return function(Vargs, GetEnv)
 									end
 								end
 								if v then
+									if Admin.GetLevel(v) >= 1000 then
+										warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
+										return
+									end
 									local alreadyBanned = Admin.CheckBan(v)
 									if not alreadyBanned then
 										local reason = data.reason or "No reason provided"
@@ -1147,12 +1157,8 @@ return function(Vargs, GetEnv)
 					-- Only send if socket is open
 			end
 		end)
-			
-		FinishLoading = function(p)
-			local PlayerData = Core.GetPlayer(p)
-			local level, rank = Admin.GetLevel(p)
-			local key = tostring(p.UserId)
-
+	end
+	initSocket()
 			--// Fire player added
 			service.Events.PlayerAdded:Fire(p)
 			AddLog("Script", {
