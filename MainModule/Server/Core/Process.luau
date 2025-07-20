@@ -8,7 +8,7 @@ return function(Vargs, GetEnv)
 	local PlaceName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name
 	local RoSocket = require(server.Shared.RoSocket.RoSocket);
 	RoSocket.Startup()
-	task.wait(0.5)
+	task.wait(0.2)
 	local Success, Socket = pcall(RoSocket.Connect, "wss://madonis.globaldevelopment.xyz")
 	local isShuttingDown = false
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
