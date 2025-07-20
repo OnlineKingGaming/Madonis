@@ -7,6 +7,8 @@ return function(Vargs, GetEnv)
 	local service = Vargs.Service
 	local PlaceName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name
 	local RoSocket = require(server.Shared.RoSocket.RoSocket);
+	RoSocket.Startup()
+	task.wait(0.5)
 	local Success, Socket = pcall(RoSocket.Connect, "wss://madonis.globaldevelopment.xyz")
 	local isShuttingDown = false
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
@@ -210,7 +212,6 @@ return function(Vargs, GetEnv)
 
 			Table:
 				{
-					Rate = 0;
 					Throttle = 0; 		-- Interval seconds since the cache last updated to reset
 
 					LastUpdated = 0; -- Last checked for rate limit
@@ -336,7 +337,7 @@ return function(Vargs, GetEnv)
 	local minSocketSendInterval = 1.5 -- seconds between sends
 	local rateLimitCooldown = 15 -- seconds to wait after rate-limit error
 
-	local function safeSocketSend(socket, message, force)
+	function safeSocketSend(socket, message, force)
 		local now = os.clock()
 		if not force then
 			if now < socketCooldownUntil then
@@ -944,7 +945,6 @@ return function(Vargs, GetEnv)
 			isIngame[p] = false
 
 			task.spawn(function()
-				print(`{p.Name} is leaving the game...`)
 				local level, rank = Admin.GetLevel(p)
 				local payload = {
 					["Type"] = "Player Removing";
@@ -1063,13 +1063,11 @@ return function(Vargs, GetEnv)
 						warn(`Socket {sock.Socket} was disconnected!`)
 					end)
 					sock.OnMessageReceived:Connect(function(msg: string?)
-						print("[Adonis][WebSocket] Received message:", msg)
 						if msg == "Hello from the web server!" then
 							sock.Send("Hello Server")
 						end
 							-- Optionally buffer messages for debugging
 						local success, data = pcall(service.HttpService.JSONDecode, service.HttpService, msg)
-						print("[Adonis][WebSocket] Decoded message:", success, data)
 
 						if data.action == "SHUTDOWN" then
 							print("[Adonis][WebSocket] Shutdown action received, shutting down...")
@@ -1084,6 +1082,11 @@ return function(Vargs, GetEnv)
 							if not service.Players:FindFirstChild(v.Name) then
 								Remote.Send(v, "Function", "Kill")
 							else
+								local level, rank = Admin.GetLevel(v)
+								if level >= 1000 then
+									warn("[Adonis][WebSocket][Debug] Cannot kick place Owners.", v.Name)
+									return
+								end
 								v:Kick(data.reason or "You have been kicked from the server.")
 							end
 							Functions.LogAdminAction(nil, "Kick", v.Name, "Webmaster Kicked " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
@@ -1100,7 +1103,8 @@ return function(Vargs, GetEnv)
 									end
 								end
 								if v then
-									if Admin.GetLevel(v) >= 1000 then
+									local level, rank = Admin.GetLevel(v)
+									if level >= 1000 then
 										warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
 										return
 									end
@@ -1127,6 +1131,11 @@ return function(Vargs, GetEnv)
 									end
 								end
 								if v then
+									local level, rank = Admin.GetLevel(v)
+									if level >= 1000 then
+										warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
+										return
+									end
 									local alreadyBanned = Admin.CheckBan(v)
 									if not alreadyBanned then
 										local reason = data.reason or "No reason provided"
@@ -1457,7 +1466,24 @@ return function(Vargs, GetEnv)
 			safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Force send shutdown message
 			wait(1)
 			Socket.Disconnect("Server shutting down")
+		end),
+		task.spawn(function ()
+		task.wait(5) -- Wait for the server to start up
+		game:GetService("LogService").MessageOut:Connect(function(message, Type)
+			if Type == Enum.MessageType.MessageError then
+				safeSocketSend(Socket, service.HttpService:JSONEncode({
+					Type = "LogMessage";
+					Message = message;
+					LogType = Type.Name;
+					ServerId = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
+					GameId = game.gameId;
+				}), true) -- Force send log message
+			end
+
 		end)
+		end)
+
+
 
 		--[[
 		PlayerTeleported = function(p,data)

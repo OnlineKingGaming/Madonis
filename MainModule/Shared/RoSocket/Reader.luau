@@ -30,8 +30,13 @@ export type DisconnectionData = {
 	UUID: string?,
 	Socket: string?
 }
------------------------------------------------
-local SOCKET_SERVER_URL = "http://84.241.106.110:6214" --You can change this if you self host
+
+Reader.Debug = false
+function Reader:SetServerIP<T>(ip: string?, ...: any?)
+	-- Update the SOCKET_SERVER_URL with the new IP
+	SOCKET_SERVER_URL = ip
+	if Reader.Debug then print("[DEBUG][SetServerIP] Updated SOCKET_SERVER_URL to:", SOCKET_SERVER_URL) end
+end
 -----------------------------------------------
 local WSS_PATTERN = "^wss://[%w%.]"
 -----------------------------------------------
@@ -50,10 +55,15 @@ function Reader:ValidateWSSLink<T>(link: string?, ...: any?): boolean
 end
 
 function Reader:Connect<T>(socket: string?, ...: any?)
+	if Reader.Debug then print("[DEBUG][Connect] Called with socket:", socket) end
 	local ValidLink = self:ValidateWSSLink(tostring(socket))
+	if Reader.Debug then print("[DEBUG][Connect] ValidLink:", ValidLink) end
 	if ValidLink == false then
+		if Reader.Debug then warn("[DEBUG][Connect] Invalid socket link:", socket) end
 		return error(self:FormatText(`Invalid socket link passed. Their format is: wss://hostname/path.`))
 	end
+	if Reader.Debug then print("[DEBUG][Connect] Sending RequestAsync to URL:", `{SOCKET_SERVER_URL}{Dictionary.Connection}`) end
+	if Reader.Debug then print("[DEBUG][Connect] Request Body:", HttpService:JSONEncode({Socket = tostring(socket)})) end
 	local Response : RequestResponse = HttpService:RequestAsync({
 		Url = `{SOCKET_SERVER_URL}{Dictionary.Connection}`,
 		Method = "POST",
@@ -62,19 +72,22 @@ function Reader:Connect<T>(socket: string?, ...: any?)
 		},
 		Body = HttpService:JSONEncode({Socket = tostring(socket)})
 	})
+	if Reader.Debug then print("[DEBUG][Connect] Response:", Response) end
 
 	if Response.Success == true then
 		warn(self:FormatText(`Successfully connected!`))
 		local DecodedSuccess, DecodedResult : ConnectionData = pcall(function() 
 			return HttpService:JSONDecode(Response.Body)
 		end)
-
+		if Reader.Debug then print("[DEBUG][Connect] DecodedSuccess:", DecodedSuccess, "DecodedResult:", DecodedResult) end
 		if DecodedSuccess == true then
 			return DecodedResult
 		elseif DecodedSuccess == false then
+			if Reader.Debug then warn("[DEBUG][Connect] Failed to decode response:", DecodedResult) end
 			return error(self:FormatText(`Failed to decode response | Error {tostring(DecodedResult)}`))
 		end
 	elseif Response.Success == false then
+		if Reader.Debug then warn("[DEBUG][Connect] Failed to connect. Status Code:", Response.StatusCode) end
 		return error(self:FormatText(`Failed to connect to socket {tostring(socket)} | Status Code {tostring(Response.StatusCode)}`))
 	end
 end
@@ -105,9 +118,12 @@ function Reader:Disconnect<T>(id: string?, ...: any?): boolean
 	end
 end
 function Reader:Send<T>(id: string?, message: string?, ...): boolean
+	if Reader.Debug then print("[DEBUG][Send] Called with id:", id, "message:", message, "...:", ...) end
 	if typeof(message) == "table" then
 		message = ...
 	end
+	if Reader.Debug then print("[DEBUG][Send] Sending RequestAsync to URL:", `{SOCKET_SERVER_URL}{Dictionary.Send}`) end
+	if Reader.Debug then print("[DEBUG][Send] Request Body:", HttpService:JSONEncode({UUID = tostring(id), Message = tostring(message)})) end
 	local Response : RequestResponse = HttpService:RequestAsync({
 		Url = `{SOCKET_SERVER_URL}{Dictionary.Send}`,
 		Method = "POST",
@@ -116,18 +132,21 @@ function Reader:Send<T>(id: string?, message: string?, ...): boolean
 		},
 		Body = HttpService:JSONEncode({UUID = tostring(id), Message = tostring(message)})
 	})
+	if Reader.Debug then print("[DEBUG][Send] Response:", Response) end
 
 	if Response.Success == true then 
 		local DecodedSuccess, DecodedResult = pcall(function() 
 			return HttpService:JSONDecode(Response.Body)
 		end)
-
+		if Reader.Debug then print("[DEBUG][Send] DecodedSuccess:", DecodedSuccess, "DecodedResult:", DecodedResult) end
 		if DecodedSuccess == true then
 			return DecodedResult
 		elseif DecodedSuccess == false then
+			if Reader.Debug then warn("[DEBUG][Send] Failed to decode response:", DecodedResult) end
 			return error(self:FormatText(`Failed to decode response | Error {tostring(DecodedResult)}`))
 		end
 	elseif Response.Success == false then
+		if Reader.Debug then warn("[DEBUG][Send] Failed to send message. Status Code:", Response.StatusCode) end
 		return error(self:FormatText(`Failed to send message! This socket is probably disconnected.`))
 	end
 end
