@@ -1,106 +1,107 @@
-<div align="center">
+# Madonis Admin System
 
-<img src="https://repository-images.githubusercontent.com/55325103/2bed6800-bfef-11eb-835b-99b981918623?width=300&height=260" alt="The Epix-Incorporated logo" width="300" height="260">
-
-<div>&nbsp;</div>
-
-[![Roblox model](https://img.shields.io/static/v1?label=roblox&message=model&color=blue&logo=roblox&logoColor=white)](https://www.roblox.com/library/7510622625/ "The offical Adonis admin model.")
-[![Roblox nightly](https://img.shields.io/badge/roblox-nightly-blueviolet?logo=roblox)](https://www.roblox.com/library/8612978896/ "The beta testing source code modulescript.")
-[![LICENSE](https://img.shields.io/github/license/Epix-Incorporated/Adonis)](https://github.com/Epix-Incorporated/Adonis/blob/master/LICENSE.md "The legal LICENSE governing the usage of the admin system.")
-[![releases](https://img.shields.io/github/v/release/Epix-Incorporated/Adonis?label=version)](https://github.com/Epix-Incorporated/Adonis/releases "Downloadable versions of the admin system.")
-[![Discord server](https://img.shields.io/discord/81902207070380032?label=discord&logo=discord&logoColor=white)](https://dvr.cx/discord "A Discord server where people can discuss Adonis related stuff and talk.")
-[![lint](https://github.com/Epix-Incorporated/Adonis/actions/workflows/lint.yml/badge.svg)](https://github.com/Epix-Incorporated/Adonis/actions/workflows/lint.yml "Allows to check if the code of the admin system is valid without errors.")
-
-</div>
+**Madonis** is a powerful, modular, and community-driven server moderation and management system for Roblox. Designed for flexibility, security, and extensibility, Madonis empowers game creators to manage their experiences with advanced admin tools, plugin support, and robust APIs.
 
 ---
 
-Adonis is a community-maintained server moderation and management system created for use on the Roblox platform.
+## 🚀 Features
 
-<h2 id="install"> ✨ Installation </h2>
+- **Modern Admin Commands:** Ban, kick, mute, rank, logs, and more.
+- **Role & Permission System:** Fine-grained control over admin levels and access.
+- **Plugin Architecture:** Easily extend Madonis with custom plugins (server & client).
+- **WebSocket Integration:** Real-time external API calls and cross-server communication.
+- **Anti-Exploit & Security:** Built-in anti-cheat, anti-spam, and player validation.
+- **Customizable UI:** Multiple themes and UI layouts for both desktop and mobile.
+- **Rate Limiting:** Prevents abuse of commands and remote events.
+- **Debug & Developer Tools:** Toggle debug mode, inspect logs, and use developer APIs.
+- **DataStore Integration:** Secure, customizable data storage for bans, ranks, and more.
+- **Extensive Logging:** Track commands, joins, leaves, errors, and more.
+- **Cross-Server Messaging:** Send messages and actions between game servers.
+- **Localization Ready:** Easily adapt for different languages and regions.
 
-📢 **New to Adonis? Take a look at our [official quick start video](https://youtu.be/1f9x9gdxLjw) or read [the unofficial setup guide](https://devforum.roblox.com/t/1535122).**
+---
 
-If you get stuck, feel free to ask for assistance on our [Discord server](https://discord.gg/H5RvTP3).
+## 📦 Installation
 
-### Method 1 (recommended): Official Roblox Model
+### 1. Roblox Model (Recommended)
+- [Get the official Madonis Loader](https://www.roblox.com/library/7510622625/)
+- Insert into `ServerScriptService` in Roblox Studio.
 
-1. [Take a copy](https://www.roblox.com/library/7510622625/) of the Adonis loader model from the Roblox Library.
-2. Insert the model into Studio using the Toolbox, and place it under `ServerScriptService`. (Do not leave it in the `Workspace`!)
+### 2. GitHub Releases
+- [Download the latest release](https://github.com/Epix-Incorporated/Adonis/releases/latest)
+- Import the `.rbxm` file into Studio.
 
-### Method 2: GitHub Releases
+### 3. Source/Filesystem (Advanced)
+- Clone this repository.
+- Use [Rojo](https://rojo.space/) or similar tools to build and sync to Studio.
+- Example: `rojo build . -o Madonis.rbxmx`
 
-1. Download the `rbxm` file snapshot from the [latest release](https://github.com/Epix-Incorporated/Adonis/releases/latest).
-2. Import the model file into Studio.
+> **Note:** Filesystem builds may include experimental or unstable features.
 
-ℹ️ **Note:** By default, snapshots included in releases have [`DebugMode`](#debug-mode) enabled.
+---
 
-### Method 3: Filesystem
+## ⚙️ Configuration
 
-1. Download the repository to your computer's file system.
-2. Install and use a plugin like [Rojo](https://rojo.space/) to compile Adonis into a `rbxmx` file.
-    If using Rojo, you can run `rojo build /path/to/adonis -o Adonis.rbxmx` to build an `rbxmx`.
-3. Import the compiled model file into Studio.
+1. **Settings:**  
+   Edit `Adonis_Loader/Config/Settings.luau` to customize permissions, DataStore keys, UI, and more.
+2. **Debug Mode:**  
+   Enable `DebugMode` in the loader to use local modules and developer features.
+3. **Plugins:**  
+   Add your own plugins to `MainModule/Server/Plugins` or `MainModule/Client/Plugins`.
+4. **Themes:**  
+   Switch UI themes in `MainModule/Client/UI`.
 
-🔐 **Warning:** By default, loaders compiled from the repository have [`DebugMode`](#debug-mode) enabled.
+---
 
-**⚠️ Method 3 compiles the *bleeding edge* version of Adonis, which may be not fully tested and is highly unstable.**
+## 🛡️ Security & Anti-Exploit
 
-<h3 id="configuring-adonis">⚙️ Configuring Adonis</h3>
+- **Anti-Cheat:** Detects and blocks common exploit attempts.
+- **Rate Limiting:** Prevents command and remote event spam.
+- **Whitelist & Ban System:** Robust player filtering and ban management.
+- **Server Lock:** Restrict access during maintenance or emergencies.
 
-Once you've inserted the Adonis loader into your game, open `Adonis_Loader` > `Config` > `Settings`, and change `settings.DataStoreKey` to something absolutely random (eg. `"2fgi02e)^Q"`). This is for security as it prevents serverside tampering with Adonis's datastores.
+---
 
-You may then edit the Settings module to configure Adonis to suit your game. Instructions and elaboration are provided within the Settings module.
+## 🔌 Extending Madonis
 
-<h3 id="debug-mode">🔧 Debug Mode</h3>
+- **Plugins:**  
+  Write custom plugins for new commands, integrations, or UI features.
+- **WebSocket API:**  
+  Integrate with external services using the built-in RoSocket module.
+- **Themes:**  
+  Create and apply custom UI themes for your community.
 
-#### **PLEASE NOTE THAT THIS FEATURE IS INTENDED FOR DEVELOPMENT/DEBUGGING PURPOSES ONLY, PLEASE CHANGE `ModuleID` FOR CUSTOM MODULES**
-The `DebugModule` feature enables a number of debug features, including but not limited to:
+---
 
-1. Not protecting the Adonis model (such as parenting it to nil)
-2. Exposes a debugging API
-3. Enables debugging commands for Creators
+## 📝 Documentation & Support
 
-The Adonis loader provides a `DebugMode` option which will load a local copy of the `MainModule` rather than fetching the latest version. This could be useful if you are a contributor working on the `MainModule`. Debug mode expects the `MainModule` to share the same parent with the loader model (e.g. both should be in `ServerScriptService`). **By default, snapshots provided in releases have `DebugMode` enabled.**
+- [Official Wiki & Docs](https://github.com/Epix-Incorporated/Adonis/wiki)
+- [User Manual & Feature Showcase](https://github.com/Epix-Incorporated/Adonis/wiki/User-Manual-&-Feature-Showcase)
+- [Discord Community](https://discord.gg/H5RvTP3)
+- [Roblox Group](https://www.roblox.com/groups/886423)
 
-#### Toggling debug mode
+---
 
-1. Open `Adonis_Loader` > `Loader` > `Loader`
-2. Change `DebugMode` at the end of the `data` table to the desired value (e.g. `DebugMode = false`)
+## 🤝 Contributing
 
-* Official Adonis Loader: <https://www.roblox.com/library/7510622625/Adonis-Admin-Loader-Epix-Incorporated>
-* Official MainModule: <https://www.roblox.com/library/7510592873/Adonis-MainModule>
-* Nightly MainModule: <https://www.roblox.com/library/8612978896/Nightlies-Adonis-MainModule>
+We welcome contributions!  
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### Reference
+- Fork the repo and submit a pull request.
+- Report issues or suggest features via GitHub Issues.
+- Join the Discord for real-time help and discussion.
 
-* 📄 Documentation: <https://github.com/Epix-Incorporated/Adonis/wiki>
-* 📘 User Manual: <https://github.com/Epix-Incorporated/Adonis/wiki/User-Manual-&-Feature-Showcase>
-* 📜 Contributing Guide: <https://github.com/Epix-Incorporated/Adonis/blob/master/CONTRIBUTING.md>
+---
 
-### Social
+## ⚖️ License
 
-* Discord Server: <https://discord.gg/H5RvTP3> or <https://dvr.cx/discord>
-* Roblox Group: <https://www.roblox.com/groups/886423>
+Madonis is released under the [MIT License](LICENSE.md).
 
-### Misc
+---
 
-* Plugins Repository: <https://github.com/Epix-Incorporated/Adonis-Plugins>
-* Donor Perks Pass: <https://www.roblox.com/game-pass/1348327>
+## 💡 Credits
 
-## ⭐ Contributing
-
-The purpose of this repository is to allow others to contribute and make improvements to Adonis. Even if you've never contributed to GitHub before, we would appreciate any contributions that you can provide.
-
-### 📜 Contributing Guide
-
-Read the [contributing guide](CONTRIBUTING.md) to get a better understanding of our development process and workflow, along with answers to common questions related to contributing to Adonis.
-
-### ⚖️ License
-
-Adonis is available under the terms of [the MIT license](LICENSE.md).
-
-### Thank you to our contributors
+Thanks to all contributors and the Roblox developer community for making Madonis possible!
 
 [![contributors](https://contributors-img.web.app/image?repo=Epix-Incorporated/Adonis)](https://github.com/Epix-Incorporated/Adonis/graphs/contributors)
 
