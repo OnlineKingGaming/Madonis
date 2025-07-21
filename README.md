@@ -1,4 +1,5 @@
-<img width="600" height="600" alt="MLogoTrans" src="https://github.com/user-attachments/assets/cdd6f5f3-d60d-4c8d-b315-f0f6c4bd4c6f" />
+<img width="300" height="300" alt="MLogoTrans" src="https://github.com/user-attachments/assets/cdd6f5f3-d60d-4c8d-b315-f0f6c4bd4c6f" />
+
 # Madonis
  Admin System
 
