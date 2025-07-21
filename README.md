@@ -1,7 +1,9 @@
-<img width="300" height="300" alt="MLogoTrans" src="https://github.com/user-attachments/assets/cdd6f5f3-d60d-4c8d-b315-f0f6c4bd4c6f" />
+<div align="center">
+  <img width="300" height="300" alt="MLogoTrans" src="https://github.com/user-attachments/assets/cdd6f5f3-d60d-4c8d-b315-f0f6c4bd4c6f" />
 
-# Madonis
- Admin System
+  # Madonis
+  Admin System
+</div>
 
 **Madonis** is a powerful, modular, and community-driven server moderation and management system for Roblox. Designed for flexibility, security, and extensibility, Madonis empowers game creators to manage their experiences with advanced admin tools, plugin support, and robust APIs.
 
