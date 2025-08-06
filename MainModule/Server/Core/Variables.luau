@@ -27,6 +27,7 @@ return function(Vargs, GetEnv)
 		Settings = server.Settings
 
 		Variables.DiscordWebhook = Settings.DiscordWebhook
+		Variables.ShiftWebhook = Settings.ShiftWebhook
 		Variables.SizeLimit = Settings.SizeLimit or Variables.SizeLimit
 		Variables.ChatCreateRobloxCommands = true
 		Variables.DisableRejoinAtMaxPlayers = Settings.DisableRejoinAtMaxPlayers or Variables.DisableRejoinAtMaxPlayers
@@ -76,6 +77,7 @@ return function(Vargs, GetEnv)
 		ScriptEditor = {},
 		CachedDonors = {},
 		DiscordWebhook = "",
+		ShiftWebhook = "",
 		serverId = "",
 		shiftPlayers = {},
 		peaceTimeActive = false,

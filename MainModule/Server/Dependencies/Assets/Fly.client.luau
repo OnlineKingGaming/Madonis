@@ -27,13 +27,18 @@ local Check, Start, Stop, Toggle, HandleInput, DPadifyInput
 
 local connections = {}
 
+local FlySettings = {
+	EnableAnimations = false, -- Enable flight animations
+	FlightAnimationId = 95790806252900, -- ID of the flight animation
+}
+
 function Check()
 	if script.Parent == part then
 		return true
 	end
 end
 
-local FLIGHT_ANIMATION_ID = 95790806252900
+local FLIGHT_ANIMATION_ID = FlySettings.FlightAnimationId
 local function playFlightAnimation()
 	local animator = human and (human:FindFirstChildOfClass("Animator") or human:WaitForChild("Animator", 2))
 	if animator then
@@ -89,7 +94,9 @@ function Start()
 		end)
 	end
 
-	playFlightAnimation()
+	if FlySettings.EnableAnimations then
+		playFlightAnimation()
+	end
 
 	while flying and antiLoop == antiReLoop do
 		if not Check() then
@@ -155,7 +162,9 @@ end
 function Stop()
 	flying = false
 	human.PlatformStand = false
-	stopFlightAnimation()
+	if FlySettings.EnableAnimations then
+		stopFlightAnimation()
+	end
 	if bPos then
 		bPos.MaxForce = 0
 	end

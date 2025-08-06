@@ -1468,27 +1468,22 @@ return function(Vargs, GetEnv)
 			Socket.Disconnect("Server shutting down")
 		end),
 		task.spawn(function ()
-		task.wait(5) -- Wait for the server to start up
-		game:GetService("LogService").MessageOut:Connect(function(message, Type)
-			if Type == Enum.MessageType.MessageError then
-				safeSocketSend(Socket, service.HttpService:JSONEncode({
-					Type = "LogMessage";
-					Message = message;
-					LogType = Type.Name;
-					ServerId = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
-					GameId = game.gameId;
-				}), true) -- Force send log message
-			end
+			task.wait(5)
+			game:GetService("LogService").MessageOut:Connect(function(message, Type)
+				if Settings.DisableErrorLogging == true or service.RunService:IsStudio() then
+					return
+				end
+				if Type == Enum.MessageType.MessageError then
+					safeSocketSend(Socket, service.HttpService:JSONEncode({
+						Type = "LogMessage";
+						Message = message;
+						LogType = Type.Name;
+						ServerId = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
+						GameId = game.gameId;
+					}), false) -- Force send log message
+				end
 
+			end)
 		end)
-		end)
-
-
-
-		--[[
-		PlayerTeleported = function(p,data)
-
-		end;
-		]]
 	};
 end

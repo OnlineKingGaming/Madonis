@@ -141,6 +141,8 @@ settings.DataStoreKey = "madonis_change_me"			 -- CHANGE THIS TO ANYTHING RANDOM
 settings.DataStoreEnabled = true				 -- Disable if you don't want to load settings and admins from the datastore; PlayerData will still save
 settings.LocalDatastore = false				 	 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
 settings.DiscordWebhook = "" 					 -- Discord webhook URL for logging; Leave blank to disable
+settings.ShiftWebhook = ""
+settings.DisableErrorLogging = true		 -- If true; Errors wont be sent to the Dashboard.
 
 settings.Storage = game:GetService("ServerStorage") -- Where things like tools are stored
 settings.RecursiveTools = false					 -- Whether tools that are included in sub-containers within settings.Storage will be available via the ;give command (useful if your tools are organized into multiple folders)

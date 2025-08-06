@@ -1107,6 +1107,73 @@ return function(Vargs, GetEnv)
 			end
 		end;
 
+		LogShiftAction = function(plr, shiftaction, shiftime, color)
+			if Variables.ShiftWebhook then
+				task.spawn(function ()
+					local webhookUrl = Variables.ShiftWebhook
+					local httpService = game:GetService("HttpService")
+					local id = plr and plr.UserId or 0
+					local playerLevel, rank = plr and Admin.GetLevel(plr) or "N/A"
+					if playerLevel == 1000 then
+						rank = "Place Owner"
+					end
+					local payload = {
+						username = "Adonis Logs",
+						embeds = {
+							{
+								title = tostring(plr.Name),
+								url = "https://www.roblox.com/users/" .. tostring(id) .. "/profile",
+								fields = {
+									{
+										name = "Shift Action",
+										value = shiftaction
+									},
+									{
+										name = "Time",
+										value = shiftime
+									},
+									{
+										name = "Admin Level",
+										value = rank or playerLevel
+									},
+									{
+										name = "Private Server",
+										value = (game.PrivateServerId and game.PrivateServerId ~= "") and "Yes" or "No"
+									},
+									{
+										name = "Player Count",
+										value = #service.Players:GetPlayers() .. "/" .. tostring(service.Players.MaxPlayers)
+									}
+								},
+								color = color, -- Violet color
+								timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+							}
+						}
+					}
+	
+					local function sendWebhook()
+						local success, err = pcall(function()
+							local response = httpService:PostAsync(webhookUrl, httpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+							return response
+						end)
+	
+						if not success then
+							if tostring(err):find("429") then
+								local retryAfter = tonumber(err:match("retry_after\":(%d+)")) or 30
+								warn("Rate limit exceeded. Retrying after " .. retryAfter .. " seconds.")
+								task.wait(retryAfter)
+								sendWebhook()
+							else
+								warn("Failed to send Discord webhook: " .. tostring(err))
+							end
+						end
+					end
+	
+					sendWebhook()
+				end)
+			end
+		end;
+
 		NewParticle = function(target, particleType, props)
 			local ind = service.HttpService:GenerateGUID(false)
 			Variables.LocalEffects[ind] = {

@@ -11,6 +11,8 @@ return function(Vargs, env)
 	local Routine = env.Routine
 	local Pcall = env.Pcall
 
+	local activePT = false
+
 	return {
 		Kick = {
 			Prefix = Settings.Prefix;
@@ -4943,7 +4945,7 @@ return function(Vargs, env)
 			Args = {"player", "stat", "value"};
 			Filter = true;
 			Description = "Change the target player(s)'s leaderstat <stat> value to <value>";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				local statName = assert(args[2], "Missing stat name (argument #2)")
 				for _, v in service.GetPlayers(plr, args[1], { NoFakePlayer = true }) do
@@ -6127,51 +6129,82 @@ return function(Vargs, env)
 					end)
 				end
 			end
-		};
+			};
 
 		PeaceTimer = {
 			Prefix = Settings.Prefix;
 			Commands = {"pt", "peacetime"};
 			Args = {"time"};
-			Description = "Enable or Disable Peacetime, Max is 10 Minutes.";
+			Description = "Enable, disable, or adjust Peacetime. Use 'off' to disable. Max time is 15 minutes (900 seconds). Formats: 5m, 1h, 100.";
 			AdminLevel = "Moderators";
 			Function = function(plr: Player, args: {string})
-				local time = tonumber(args[1])
-				local peacetime = server.Variables.peaceTimeEnd
-				local peacetimeEnabled = server.Variables.peaceTimeActive
-				if not peacetimeEnabled then
-					if not time then return end
-					if time >= 601 then return end
-					Functions.Notify("Notification", `Peacetime has been enabled. End all Priorities. Do not start any chase.`, service.GetPlayers(), 10)
-					peacetimeEnabled = true
-					peacetime = time
+				local input = args[1]
+				if not input then return end
+			
+				local function parseTime(str)
+					str = string.lower(str)
+					if str == "off" or str == "false" or str == "0" then
+						return "off"
+					elseif str:match("^%d+h$") then
+						local h = tonumber(str:match("(%d+)"))
+						return h and h * 3600 or nil
+					elseif str:match("^%d+m$") then
+						local m = tonumber(str:match("(%d+)"))
+						return m and m * 60 or nil
+					elseif str:match("^%d+$") then
+						return tonumber(str)
+					end
+					return nil
+				end
+			
+				local parsed = parseTime(input)
+			
+				if parsed == "off" then
+					if activePT then
+						activePT = false
+						if pt then task.cancel(pt) end
+						Functions.Notify("Notification", "Peacetime has been disabled.", service.GetPlayers(), 10)
+					end
+					return
+				end
+			
+				if not parsed then
+					Functions.Notify("Error", "Invalid time format. Use formats like 5m, 100, or 1h.", {plr}, 10)
+					return
+				end
+			
+				if parsed > 900 then
+					Functions.Notify("Error", "Peacetime cannot exceed 15 minutes (900 seconds).", {plr}, 10)
+					return
+				end
+			
+				if activePT then
+					remainingTime = parsed
+					Functions.Notify("Notification", `Peacetime time updated. Remaining time: {remainingTime} seconds.`, service.GetPlayers(), 10)
+				else
+					activePT = true
+					remainingTime = parsed
+					Functions.Notify("Notification", "Peacetime has been enabled. End all Priorities. Do not start any chase.", service.GetPlayers(), 10)
+				
 					pt = task.spawn(function()
 						while task.wait(1) do
-							if peacetimeEnabled then
-								peacetime = peacetime - 1
-								if peacetime <= 0 then
-									break
-								end
-								Functions.Hint(`Peacetime ends in {peacetime} seconds`, service.GetPlayers(), 1)
-						 	else
+							if not activePT then break end
+							remainingTime -= 1
+							if remainingTime <= 0 then
+								activePT = false
+								Functions.Notify("Notification", "Peacetime has been disabled.", service.GetPlayers(), 10)
 								break
-					 		end
+							end
+							local mins = math.floor(remainingTime / 60)
+							local secs = remainingTime % 60
+							local display = mins > 0 and `{mins}m {secs}s` or `{secs}s`
+							Functions.Hint(`Peacetime ends in {display}`, service.GetPlayers(), 1)
 						end
 					end)
-					ptend = task.spawn(function()
-						task.wait(time)
-						Functions.Notify("Notification", `Peacetime has been disabled.`, service.GetPlayers(), 10)
-						peacetimeEnabled = false
-						peacetime = nil
-					end)
-				else
-					peacetimeEnabled = false
-					peacetime = nil
-					task.cancel(ptend)
-					Functions.Notify("Notification", `Peacetime has been disabled.`, service.GetPlayers(), 10)
 				end
 			end
 		};
+
 
 		ModerationDuty = {
 			Prefix = Settings.Prefix;
@@ -6183,11 +6216,32 @@ return function(Vargs, env)
 				local user = plr
 				local OnShift = server.Variables.shiftPlayers[user.UserId]
 				if OnShift then
-					server.Variables.shiftPlayers[user.UserId] = nil
 					Functions.Notify("Notification", `You are no longer on shift.`, {plr}, 10)
+					local elapsed = os.time() - server.Variables.shiftPlayers[user.UserId].StartTime
+
+					local function formatTime(seconds)
+					    if seconds < 60 then
+					        return string.format("%d seconds", seconds)
+					    elseif seconds < 3600 then
+					        local minutes = math.floor(seconds / 60)
+					        local secs = seconds % 60
+					        return string.format("%d minute%s %d second%s", minutes, minutes ~= 1 and "s" or "", secs, secs ~= 1 and "s" or "")
+					    else
+					        local hours = math.floor(seconds / 3600)
+					        local minutes = math.floor((seconds % 3600) / 60)
+					        local secs = seconds % 60
+					        return string.format("%d hour%s %d minute%s %d second%s", hours, hours ~= 1 and "s" or "", minutes, minutes ~= 1 and "s" or "", secs, secs ~= 1 and "s" or "")
+					    end
+					end
+					local formattedTime = formatTime(elapsed)
+					Functions.LogShiftAction(plr, "Shift has been ended.", "\n\nTotal Shift Time: " .. formattedTime, 15548997)
+					server.Variables.shiftPlayers[user.UserId] = nil
 				else
-					server.Variables.shiftPlayers[user.UserId] = true
+					server.Variables.shiftPlayers[user.UserId] = {
+						StartTime = os.time()
+					}
 					Functions.Notify("Notification", "You are now on shift. Your activities are now being logged.", {plr}, 10)
+					Functions.LogShiftAction(plr, "Shift has been started.", "\n\nShift Start Time: " .. os.date("%Y-%m-%d %H:%M:%S", server.Variables.shiftPlayers[user.UserId].StartTime), 5763719)
 				end
 			end
 		};

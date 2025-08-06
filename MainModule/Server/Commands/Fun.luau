@@ -1138,7 +1138,7 @@ return function(Vargs, env)
 			Description = "A world unlike our own.";
 			Fun = true;
 			Hidden = true;
-			AdminLevel = "Admins";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string}, data)
 				if not args[1] then
 					local plrData = server.Core.GetPlayer(plr)
@@ -1333,7 +1333,7 @@ return function(Vargs, env)
 								bg.Size = UDim2.new(2, 0, 2, 0)
 								bg.Position = UDim2.new(0, 0, 0, 0)
 								bg.Parent = gui
-								if p and p.Parent == service.Players then service.TeleportService:Teleport(6806826116, p, nil, bg) end
+								if p and p.Parent == service.Players then p:Kick("You have been abducted by aliens.\nThey have examined you thoroughly...\nUnfortunately, you didn't pass the taste test.\nPrepare to be eaten.\nGoodbye, Earthling.") end
 								task.wait(0.5)
 								pcall(function() gui:Destroy() end)
 							end
@@ -1424,7 +1424,12 @@ return function(Vargs, env)
 						table.remove(players, i)
 					end
 				end
-				service.TeleportService:TeleportAsync(209424751, players)
+
+				for i, v in players do
+					if v then
+						v:Kick("You ran into the forest...\nBut you never came back.\nNature has claimed you.")
+					end
+				end
 			end
 		};
 
@@ -1444,7 +1449,11 @@ return function(Vargs, env)
 						Functions.Hint(`Unable to send {service.FormatPlayer(p)} to The Maze (insufficient permission level)`, {plr})
 					end
 				end
-				service.TeleportService:TeleportAsync(280846668, players)
+				for i, v in players do
+					if v then
+						v:Kick("You entered the maze...\nThe walls shifted behind you.\nYou were never seen again.")
+					end
+				end
 			end
 		};
 
