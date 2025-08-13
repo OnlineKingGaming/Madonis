@@ -158,7 +158,7 @@ return function(Vargs, env)
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local targLevel = Admin.GetLevel(v)
 					if sendLevel > targLevel then
-						Admin.AddAdmin(v, "HeadAdmins")
+						Admin.AddAdmin(v, "Team Member")
 						Functions.Notification("Notification", "You are a head admin. Click to view commands.", {v}, 10, "MatIcon://Shield", Core.Bytecode(`client.Remote.Send('ProcessCommand','{Settings.Prefix}cmds')`))
 						Functions.Hint(`{service.FormatPlayer(v)} is now a permanent head admin`, {plr})
 					else
@@ -180,7 +180,7 @@ return function(Vargs, env)
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local targLevel = Admin.GetLevel(v)
 					if sendLevel > targLevel then
-						Admin.AddAdmin(v, "HeadAdmins", true)
+						Admin.AddAdmin(v, "Team Member", true)
 						Functions.Notification("Notification", "You are a temp head admin. Click to view commands.", {v}, 10, "MatIcon://Shield", Core.Bytecode(`client.Remote.Send('ProcessCommand','{Settings.Prefix}cmds')`))
 						Functions.Hint(`{service.FormatPlayer(v)} is now a temporary head admin`, {plr})
 					else

@@ -1424,7 +1424,7 @@ return function(Vargs, env)
 			Commands = {"banmenu"};
 			Args = {};
 			Description = "Opens the ban menu";
-			AdminLevel = "Admins";
+			AdminLevel = "Moderators";
 			Function = function(plr: Player, args: {string}, data: {any})
 				Remote.MakeGui(plr,"BanMenu",{
 					AdminLevel = Admin.GetLevel(plr);

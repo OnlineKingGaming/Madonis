@@ -14,7 +14,7 @@ return function(Vargs, env)
 			Args = {"player", "number<s/m/h/d>", "reason"};
 			Description = `Bans the target player(s) from the game for the supplied amount of time; data-persistent; undo using {Settings.Prefix}untimeban`;
 			Filter = true;
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Moderators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {})
 				assert(args[1], "Missing target user (argument #1)")
@@ -49,7 +49,7 @@ return function(Vargs, env)
 			Args = {"username(s)", "number<s/m/h/d>", "reason"};
 			Description = `Bans the target user(s) from the game for the supplied amount of time; data-persistent; undo using {Settings.Prefix}untimeban`;
 			Filter = true;
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Hidden = true;
 			Function = function(plr: Player, args: {string}, data: {})
 				assert(args[1], "Missing target user (argument #1)")
@@ -92,7 +92,7 @@ return function(Vargs, env)
 			Commands = {"untimeban", "untimedban", "untban", "untempban", "untemporaryban"};
 			Args = {"user"};
 			Description = "Removes the target user(s) from the timebans list";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, assert(args[1], "Missing target user (argument #1)"), {
@@ -116,7 +116,7 @@ return function(Vargs, env)
 			Commands = {"globalban", "permban", "permanentban", "pban", "gameban", "gban"};
 			Args = {"player/user", "reason"};
 			Description = "Bans the target player(s) from the game permanently; if they join a different server they will be banned there too";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Moderators";
 			Dangerous = true;
 			Filter = true;
 			Function = function(plr: Player, args: {string}, data: {})
@@ -143,7 +143,7 @@ return function(Vargs, env)
 			Commands = {"unglobalban", "unpermban", "unpermanentban", "unpban", "ungameban", "ungban"};
 			Args = {"user"};
 			Description = "Unbans the target user(s) from the game; saves";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, assert(args[1], "Missing target user (argument #1)"), {
@@ -167,7 +167,7 @@ return function(Vargs, env)
 			Commands = {"tempadmin", "tadmin"};
 			Args = {"player"};
 			Description = "Makes the target player(s) a temporary admin; does not save";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: any)
 				local senderLevel = data.PlayerData.Level
@@ -190,7 +190,7 @@ return function(Vargs, env)
 			Commands = {"permadmin", "padmin", "admin"};
 			Args = {"player/user"};
 			Description = "Makes the target player(s) an admin; saves";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: any)
 				local senderLevel = data.PlayerData.Level
@@ -216,7 +216,7 @@ return function(Vargs, env)
 			Commands = {"globalmessage", "gm", "globalannounce"};
 			Args = {"message"};
 			Description = "Sends a global message to all servers";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Filter = true;
 			IsCrossServer = true;
 			CrossServerDenied = true;
@@ -232,7 +232,7 @@ return function(Vargs, env)
 			Commands = {"gtm", "globaltimedmessage", "globaltimemessage", "globaltimem"};
 			Args = {"time", "message"};
 			Description = "Sends a global message to all servers and makes it stay on the screen for the amount of time (in seconds) you supply";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Filter = true;
 			IsCrossServer = true;
 			CrossServerDenied = true;
@@ -248,7 +248,7 @@ return function(Vargs, env)
 			Commands = {"fullclear", "clearinstances", "fullclr"};
 			Args = {};
 			Description = "Removes any instance created server-side by Adonis; May break things";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local objects = service.GetAdonisObjects()
 				for i, v in objects do
@@ -267,7 +267,7 @@ return function(Vargs, env)
 			Commands = {"backupmap", "mapbackup", "bmap"};
 			Args = {};
 			Description = "Changes the backup for the restore map command to the map's current state";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local plr_name = if plr then service.FormatPlayer(plr) else "%SYSTEM%"
 
@@ -354,7 +354,7 @@ return function(Vargs, env)
 			Commands = {"explore", "explorer"};
 			Args = {};
 			Description = `Lets you explore the game, kinda like a file browser (alternative to {Settings.Prefix}dex)`;
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				Remote.MakeGui(plr, "Explorer")
 			end
@@ -365,7 +365,7 @@ return function(Vargs, env)
 			Commands = {"promptinvite", "inviteprompt", "forceinvite"};
 			Args = {"player"};
 			Description = "Opens the friend invitation popup for the target player(s), same as them running !invite";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					service.SocialService:PromptGameInvite(v)
@@ -379,7 +379,7 @@ return function(Vargs, env)
 			Args = {"player"};
 			Description = `Forces target player(s) to rejoin the server; same as them running {Settings.PlayerPrefix}rejoin`;
 			NoStudio = true;
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local players = service.GetPlayers(plr, args[1])
 				local teleportOptions = service.New("TeleportOptions", {
@@ -394,7 +394,7 @@ return function(Vargs, env)
 			Commands = {"fullshutdown", "globalshutdown"};
 			Args = {"reason"};
 			Description = "Initiates a shutdown for every running game server";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Filter = true;
 			IsCrossServer = true;
 			Function = function(plr: Player, args: {string})
@@ -427,7 +427,7 @@ return function(Vargs, env)
 			Commands = {"incognito"};
 			Args = {"player", "hideFromNonAdmins(default true)", "hideCharacter(default true)"};
 			Description = "Removes the target player from other clients' perspectives (persists until rejoin). Allows to set whether to hide only from nonadmins or from everyone.";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local hidefromEveryone = false
 				local hideCharacter = true
@@ -519,7 +519,7 @@ return function(Vargs, env)
 			Commands = {"awardbadge", "badge", "givebadge"};
 			Args = {"player", "badgeId"};
 			Description = "Awards the badge of the specified ID to the target player(s)";
-			AdminLevel = "HeadAdmins";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				if not Variables.BadgeInfoCache then
 					Variables.BadgeInfoCache = {}

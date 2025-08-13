@@ -36,65 +36,6 @@ return function(Vargs, GetEnv)
 		end
 	end)
 
-	if isReservedServer then
-		task.defer(function()
-			local waitTime = 5
-			local playersToTeleport = {}
-
-			local jobid
-			local startTask, TeleportTask = service.Threads.NewTask("Teleport Players", function()
-				jobid = TeleportService:TeleportPartyAsync(game.PlaceId, playersToTeleport, {[PARAMETER_2_NAME] = true})
-			end)
-
-			local function teleport(player)
-				local joindata = player:GetJoinData()
-				local data = type(joindata) == "table" and joindata.TeleportData
-
-				if type(data) == "table" and data[PARAMETER_NAME] then
-					Remote.RemoveGui(player, "Message")
-					Remote.MakeGui(player, "Message", {
-						Title = "Server Restart";
-						Message = "Teleporting back to main server..";
-						Scroll = false;
-						Time = 1000
-					})
-
-					task.wait(waitTime + 5)
-					waitTime /= 2
-					
-					Logs:AddLog("Script", `Teleporting {player.Name} back to the main game`)
-					teleportedPlayers[player] = 1
-					table.insert(playersToTeleport, player)
-				end
-			end
-
-			if #service.Players:GetPlayers() == 0 then
-				service.Players.PlayerAdded:Wait()
-			end
-
-			service.Players.PlayerAdded:Connect(function(player)
-				local joindata = player:GetJoinData()
-				local data = type(joindata) == "table" and joindata.TeleportData
-
-				if type(data) == "table" and data[PARAMETER_NAME] then
-					if TeleportTask.Running then
-						TeleportTask.Finished:wait()
-					end
-
-					TeleportService:TeleportToPlaceInstance(game.PlaceId, jobid, player, "", {[PARAMETER_2_NAME] = true})
-				end
-			end)
-
-			for _, player in service.Players:GetPlayers() do
-				teleport(player)
-			end
-
-			if #playersToTeleport > 0 then
-				startTask()
-			end
-		end)
-	end
-
 	Remote.Terminal.Commands.SoftShutdown = {
 		Usage = "restart";
 		Command = "restart";
@@ -104,7 +45,6 @@ return function(Vargs, GetEnv)
 			if service.RunService:IsStudio() then return end
 			if #Players:GetPlayers() == 0 then return end
 
-			local newserver = TeleportService:ReserveServer(game.PlaceId)
 			Functions.Message("Adonis", "Server Restart", "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
 			
 			task.wait(2)
@@ -114,11 +54,11 @@ return function(Vargs, GetEnv)
 			end
 
 			Logs:AddLog("Script", `Teleporting {#Players:GetPlayers()} players to a temporary softshutdown server`)
-			TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, Players:GetPlayers(), "", {[PARAMETER_NAME] = true})
+			TeleportService:TeleportAsync(game.PlaceId, Players:GetPlayers())
 			Players.PlayerAdded:Connect(function(player)
 				Logs:AddLog("Script", `Teleporting {player.Name} to a temporary softshutdown server`)
 				teleportedPlayers[player] = 1
-				TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, { player }, "", {[PARAMETER_NAME] = true})
+				TeleportService:TeleportAsync(game.PlaceId, { player })
 			end)
 			task.delay(60, function()
 				Variables.ServerLock = true
@@ -166,7 +106,6 @@ return function(Vargs, GetEnv)
 				end)
 			end
 
-			local newserver = TeleportService:ReserveServer(game.PlaceId)
 			Functions.Message("Adonis", "Server Restart", "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
 			
 			task.wait(1)
@@ -176,11 +115,11 @@ return function(Vargs, GetEnv)
 			end
 
 			Logs:AddLog("Script", `Teleporting {#Players:GetPlayers()} players to a temporary softshutdown server`)
-			TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, Players:GetPlayers(), "", {[PARAMETER_NAME] = true})
+			TeleportService:TeleportAsync(game.PlaceId, Players:GetPlayers())
 			Players.PlayerAdded:Connect(function(player)
 				Logs:AddLog("Script", `Teleporting {player.Name} to a temporary softshutdown server`)
 				teleportedPlayers[player] = 1
-				TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, { player }, "", {[PARAMETER_NAME] = true})
+				TeleportService:TeleportAsync(game.PlaceId, { player })
 			end)
 			task.delay(60, function()
 				Variables.ServerLock = true

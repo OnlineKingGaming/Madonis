@@ -1061,7 +1061,7 @@ return function(Vargs, GetEnv)
 				UserIds = { p.UserId or service.Players:GetUserIdFromNameAsync(p) },
 				Duration = tonumber(duration),
 				DisplayReason = reason,
-				PrivateReason = "This ban was made using Madonis.",
+				PrivateReason = "This ban was made using Madonis. Moderator: " .. (moderator and service.FormatPlayer(moderator) or "%SYSTEM%"),
 				ExcludeAltAccounts = false,
 				ApplyToUniverse = true,
 			}

@@ -169,6 +169,12 @@ settings.MobileTheme = "Mobilius"		-- Theme to use on mobile devices; Some UI el
 				will also change the permission level for any built-in commands associated with that rank. 																																				-			-]]
 
 settings.Ranks = {
+	["Tester"] = {
+		Level = 1;
+		Users = {
+			""
+		};
+	};
 	["Moderators"] = {
 		Level = 100;
 		Users = {

@@ -2122,7 +2122,7 @@ return function(Vargs, env)
 			Commands = {"tools", "toollist", "toolcenter", "savedtools", "addedtools", "toolpanel", "toolspanel"};
 			Args = {};
 			Description = `Shows you a list of tools that can be obtained via the {Settings.Prefix}give command, and other useful utilities`;
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			ListUpdater = function(plr: Player)
 				local data = {
 					Tools = {};
@@ -2169,7 +2169,7 @@ return function(Vargs, env)
 			Commands = {"insertlist", "inserts", "inslist", "modellist", "models"};
 			Args = {};
 			Description = "Shows you the script's available insert list";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local tab = table.create(#Variables.InsertList + #HTTP.Trello.InsertList)
 				for _, v in Variables.InsertList do table.insert(tab, v) end
@@ -2186,7 +2186,7 @@ return function(Vargs, env)
 			Commands = {"insclear", "clearinserted", "clrins", "insclr"};
 			Args = {};
 			Description = "Removes inserted objects";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for i, v in Variables.InsertedObjects do
 					v:Destroy()
@@ -2247,7 +2247,7 @@ return function(Vargs, env)
 			Commands = {"serverinstances"};
 			Args = {};
 			Description = "Shows all instances created server-side by Adonis";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			ListUpdater = function(plr: Player, updateArgs)
 				local objects = service.GetAdonisObjects()
 				local tab = table.create(#objects)
@@ -2274,7 +2274,7 @@ return function(Vargs, env)
 			Commands = {"clientinstances"};
 			Args = {"player"};
 			Description = "Shows all instances created client-side by Adonis";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			ListUpdater = function(plr: Player, target: Player)
 				if target then
 					local temp = {"Player is currently unreachable"}
@@ -2406,7 +2406,7 @@ return function(Vargs, env)
 			Commands = {"resetstats", "rs"};
 			Args = {"player"};
 			Description = "Sets target player(s)'s leader stats to 0 (N/A if it's a string)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, string.lower(args[1])) do
 					task.spawn(pcall, function()
@@ -2425,7 +2425,7 @@ return function(Vargs, env)
 			Commands = {"sell", "promptpurchase"};
 			Args = {"player", "id"};
 			Description = "Prompts the player(s) to buy the product belonging to the ID you supply";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					service.MarketPlace:PromptPurchase(v, tonumber(args[2]), false)
@@ -2438,7 +2438,7 @@ return function(Vargs, env)
 			Commands = {"capes", "capelist"};
 			Args = {};
 			Description = "Shows you the list of capes for the cape command";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local list = table.create(#Variables.Capes)
 				for _, v in Variables.Capes do
@@ -2453,7 +2453,7 @@ return function(Vargs, env)
 			Commands = {"cape", "givecape"};
 			Args = {"player", "name/color", "material", "reflectance", "id"};
 			Description = `Gives the target player(s) the cape specified, do {Settings.Prefix}capes to view a list of available capes`;
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local color="White"
 				if pcall(function() return BrickColor.new(args[2]) end) then color = args[2] end
@@ -2481,7 +2481,7 @@ return function(Vargs, env)
 			Commands = {"uncape", "removecape"};
 			Args = {"player"};
 			Description = "Removes the target player(s)'s cape";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					Functions.UnCape(v)
@@ -2795,44 +2795,39 @@ return function(Vargs, env)
 		Track = {
 			Prefix = Settings.Prefix,
 			Commands = {"track", "trace", "find", "locate", "roblox"},
-			Args = {"player", "persistent? (default: false)"},
+			Args = {"player", "persistent? (default: true)"},
 			Description = "Shows you where the target player(s) is/are",
 			AdminLevel = "Moderators",
 			Function = function(plr: Player, args: { string })
 				local plrChar = assert(plr.Character, "You don't have a character")
 				local plrHum = assert(plrChar:FindFirstChildOfClass("Humanoid"), "You don't have a humanoid")
 
-				local persistent = args[2] and (args[2]:lower() == "true" or args[2]:lower() == "yes") or true
-				if persistent and type(Variables.TrackingTable[plr.Name]) ~= "table" then
+				-- Always persistent
+				if type(Variables.TrackingTable[plr.Name]) ~= "table" then
 					Variables.TrackingTable[plr.Name] = {}
 				end
 
-				for _, v: Player in service.GetPlayers(plr, args[1]) do
-					if persistent and Variables.TrackingTable[plr.Name] then
-						Variables.TrackingTable[plr.Name][v] = true
-					end
-
-					local char = v.Character
+				local function addTracker(target: Player)
+					local char = target.Character
 					if not char then
-						Functions.Hint(`{service.FormatPlayer(v)} doesn't currently have a character`, { plr })
-						continue
+						Functions.Hint(`{service.FormatPlayer(target)} doesn't currently have a character`, { plr })
+						return
 					end
 
 					local rootPart = char:FindFirstChild("HumanoidRootPart")
 					local head = char:FindFirstChild("Head")
-
 					if not (rootPart and head) then
-						Functions.Hint(`{service.FormatPlayer(v)} doesn't currently have a HumanoidRootPart/Head`, { plr })
-						continue
+						Functions.Hint(`{service.FormatPlayer(target)} doesn't currently have a HumanoidRootPart/Head`, { plr })
+						return
 					end
 
 					task.defer(function()
 						local gui = service.New("BillboardGui", {
-							Name = `{v.Name}_Tracker`,
+							Name = `{target.Name}_Tracker`,
 							Adornee = head,
 							AlwaysOnTop = true,
 							StudsOffset = Vector3.new(0, 2, 0),
-							Size = UDim2.new(0, 200, 0, 80), -- Increased size for better visibility and consistency
+							Size = UDim2.new(0, 200, 0, 80),
 						})
 						local frame = service.New("Frame", {
 							Parent = gui,
@@ -2841,7 +2836,7 @@ return function(Vargs, env)
 						})
 						local name = service.New("TextLabel", {
 							Parent = frame,
-							Text = service.FormatPlayer(v) .. "\n"..v.Team.Name,
+							Text = service.FormatPlayer(target) .. "\n" .. (target.Team and target.Team.Name or ""),
 							BackgroundTransparency = 1,
 							Font = Enum.Font.Arial,
 							TextColor3 = Color3.new(1, 1, 1),
@@ -2854,22 +2849,56 @@ return function(Vargs, env)
 
 						Remote.MakeLocal(plr, gui, false)
 
-						local charRemovingConn
-						local plrCharRemovingConn = plr.CharacterRemoving:Once(function()
-							Remote.RemoveLocal(plr, `{v.Name}_Tracker`)
-							teamChangeConn:Disconnect()
-							if charRemovingConn then
-								charRemovingConn:Disconnect()
-							end
-						end)
-						charRemovingConn = v.CharacterRemoving:Once(function()
-							Remote.RemoveLocal(plr, `{v.Name}_Tracker`)
-							teamChangeConn:Disconnect()
-							plrCharRemovingConn:Disconnect()
+						local function removeTracker()
+							Remote.RemoveLocal(plr, `{target.Name}_Tracker`)
+						end
+
+						local charRemovingConn = target.CharacterRemoving:Connect(removeTracker)
+						local diedConn
+						local hum = char:FindFirstChildOfClass("Humanoid")
+						if hum then
+							diedConn = hum.Died:Connect(removeTracker)
+						end
+
+						local plrCharRemovingConn = plr.CharacterRemoving:Connect(removeTracker)
+
+						-- Clean up connections when tracker is removed
+						gui.AncestryChanged:Connect(function()
+							if charRemovingConn then charRemovingConn:Disconnect() end
+							if diedConn then diedConn:Disconnect() end
+							if plrCharRemovingConn then plrCharRemovingConn:Disconnect() end
 						end)
 					end)
 				end
-			end,
+
+				-- Track current targets
+				for _, v: Player in service.GetPlayers(plr, args[1]) do
+					Variables.TrackingTable[plr.Name][v] = true
+					addTracker(v)
+				end
+
+				-- Listen for new players joining
+				if not Variables.TrackingTable[plr.Name]._connections then
+					Variables.TrackingTable[plr.Name]._connections = {}
+
+					local playerAddedConn = service.Players.PlayerAdded:Connect(function(newPlr)
+						Variables.TrackingTable[plr.Name][newPlr] = true
+						addTracker(newPlr)
+						newPlr.CharacterAdded:Connect(function()
+							addTracker(newPlr)
+						end)
+					end)
+					table.insert(Variables.TrackingTable[plr.Name]._connections, playerAddedConn)
+
+					-- For all tracked players, listen for respawn
+					for _, trackedPlr in service.Players:GetPlayers() do
+						local charAddedConn = trackedPlr.CharacterAdded:Connect(function()
+							addTracker(trackedPlr)
+						end)
+						table.insert(Variables.TrackingTable[plr.Name]._connections, charAddedConn)
+					end
+				end
+			end
 		};
 
 		UnTrack = {
@@ -2879,7 +2908,7 @@ return function(Vargs, env)
 			Description = "Stops tracking the target player(s)";
 			AdminLevel = "Moderators";
 			Function = function(plr: Player, args: {string})
-				if args[1] and args[1]:lower() == `{Settings.SpecialPrefix}all` then
+				if not args[1] or args[1]:lower() == `{Settings.SpecialPrefix}all` then
 					Variables.TrackingTable[plr.Name] = nil
 					Remote.RemoveLocal(plr, "Tracker", false, true)
 				else
@@ -2899,7 +2928,7 @@ return function(Vargs, env)
 			Commands = {"phase"};
 			Args = {"player"};
 			Description = "Makes the player(s) character completely local";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					Remote.MakeLocal(v, v.Character)
@@ -2912,7 +2941,7 @@ return function(Vargs, env)
 			Commands = {"unphase"};
 			Args = {"player"};
 			Description = "UnPhases the target player(s)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					if v.Character then
@@ -3016,7 +3045,7 @@ return function(Vargs, env)
 			Commands = {"copychar", "copycharacter", "copyplayercharacter"};
 			Args = {"player", "target"};
 			Description = "Changes specific players' character to the target's character. (i.g. To copy Player1's character, do ':copychar me Player1')";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				assert(args[1], "Missing player name")
 				assert(args[2], "Missing player name. What player would you want to copy?")
@@ -3118,7 +3147,7 @@ return function(Vargs, env)
 			Commands = {"control", "takeover"};
 			Args = {"player"};
 			Description = "Lets you take control of the target player";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					if v.Character then
@@ -3276,7 +3305,7 @@ return function(Vargs, env)
 			Commands = {"r6", "classicrig"};
 			Args = {"player"};
 			Description = "Converts players' character to R6";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					task.defer(Functions.ConvertPlayerCharacterToRig, v, "R6")
@@ -3289,7 +3318,7 @@ return function(Vargs, env)
 			Commands = {"r15", "rthro"};
 			Args = {"player"};
 			Description = "Converts players' character to R15";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					Functions.ConvertPlayerCharacterToRig(v, "R15")
@@ -4099,7 +4128,7 @@ return function(Vargs, env)
 			Commands = {"give", "tool"};
 			Args = {"player", "tool"};
 			Description = "Gives the target player(s) the desired tool(s)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local found = {}
 				local temp = service.New("Folder")
@@ -4136,7 +4165,7 @@ return function(Vargs, env)
 			Commands = {"steal", "stealtools"};
 			Args = {"player1", "player2"};
 			Description = "Steals player1's tools and gives them to player2";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local victims = service.GetPlayers(plr, args[1])
 				local stealers = service.GetPlayers(plr, args[2])
@@ -4168,7 +4197,7 @@ return function(Vargs, env)
 			Commands = {"copytools"};
 			Args = {"player1", "player2"};
 			Description = "Copies player1's tools and gives them to player2";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local p1 = service.GetPlayers(plr, args[1])
 				local p2 = service.GetPlayers(plr, args[2])
@@ -4491,7 +4520,7 @@ return function(Vargs, env)
 			Args = {"player", "placeID/serverName"};
 			NoStudio = true;
 			Description = "Teleport the target player(s) to the place belonging to <placeID> or a reserved server";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local reservedServerInfo = (Core.GetData("PrivateServers") or {})[args[2]]
 				local placeId = assert(if reservedServerInfo then reservedServerInfo.ID else tonumber(args[2]), "Invalid place ID or server name (argument #2)")
@@ -4525,7 +4554,7 @@ return function(Vargs, env)
 			Filter = true;
 			NoStudio = true; -- TeleportService does not work in Studio
 			Description = "Makes a private server that you can teleport yourself and friends to using :place player(s) serverName; Will overwrite servers with the same name; Caps specific";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local place = tonumber(args[2]) or game.PlaceId
 				local code, serverId = service.TeleportService:ReserveServer(place)
@@ -4541,7 +4570,7 @@ return function(Vargs, env)
 			Commands = {"delserver", "deleteserver", "removeserver", "rmserver"};
 			Args = {"serverName"};
 			Description = "Deletes a private server from the list.";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local servers = Core.GetData("PrivateServers") or {}
 				if servers[args[1]] then
@@ -4559,7 +4588,7 @@ return function(Vargs, env)
 			Commands = {"privateservers", "createdservers"};
 			Args = {};
 			Description = "Shows you a list of private servers that were created with :makeserver";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local servers = Core.GetData("PrivateServers") or {}
 				local tab = table.create(#servers)
@@ -4577,7 +4606,7 @@ return function(Vargs, env)
 			Description = "Teleports the target player(s) to Plaza Connect to look for potential group members";
 			NoStudio = true;
 			Hidden = true;
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				Functions.Notification("Teleport", "Click to teleport to Plaza Connect", service.GetPlayers(plr, args[1]), 30, "MatIcon://QR code scanner", Core.Bytecode("service.TeleportService:Teleport(5118029260)"))
 			end
@@ -4973,7 +5002,7 @@ return function(Vargs, env)
 			Commands = {"removestats", "delstat"};
 			Args = {"name"};
 			Description = "Removes a leaderstat entirely";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				local statName = assert(args[1], "Missing the stat name!")
 
@@ -5006,7 +5035,7 @@ return function(Vargs, env)
 			Commands = {"newstat", "createstat", "cstat"};
 			Args = {"statname", "type (string/number [default: number])"};
 			Description = "Creates a new stat on the leaderboard";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				local statName = args[1]
 				if not statName then
@@ -5042,7 +5071,7 @@ return function(Vargs, env)
 			Commands = {"add", "addtostat", "addstat"};
 			Args = {"player", "stat", "value"};
 			Description = "Add <value> to <stat>";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				local statName = assert(args[2], "Missing stat name (argument #2)")
 				local valueToAdd = assert(tonumber(args[3]), "Missing/invalid numerical value to add (argument #3)")
@@ -5072,7 +5101,7 @@ return function(Vargs, env)
 			Commands = {"subtract", "minusfromstat", "minusstat", "subtractstat"};
 			Args = {"player", "stat", "value"};
 			Description = "Subtract <value> from <stat>";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				local statName = assert(args[2], "Missing stat name (argument #2)")
 				local valueToSubtract = assert(tonumber(args[3]), "Missing/invalid numerical value to subtract (argument #3)")
@@ -6108,7 +6137,7 @@ return function(Vargs, env)
 			Commands = {"fling"};
 			Args = {"player"};
 			Description = "Fling the target player(s)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					Routine(function()
@@ -6251,7 +6280,7 @@ return function(Vargs, env)
 			Commands = {"sfling", "tothemoon", "superfling"};
 			Args = {"player", "optional strength"};
 			Description = "Super fling the target player(s)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local strength = tonumber(args[2]) or 5e6
 				local scr = Deps.Assets.Sfling:Clone()
@@ -6271,7 +6300,7 @@ return function(Vargs, env)
 			Args = {"player", "name/hide"};
 			Filter = true;
 			Description = "Name the target player(s) <name> or say hide to hide their character name";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local char = v.Character;
@@ -6294,7 +6323,7 @@ return function(Vargs, env)
 			Commands = {"undisplayname", "undname"};
 			Args = {"player"};
 			Description = "Put the target player(s)'s back to normal";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local char = v.Character;
@@ -6313,7 +6342,7 @@ return function(Vargs, env)
 			Args = {"player", "name/hide"};
 			Filter = true;
 			Description = "Name the target player(s) <name> or say hide to hide their character name";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local name = args[2] == "hide" and " " or args[2]
 
@@ -6332,7 +6361,7 @@ return function(Vargs, env)
 			Commands = {"unname", "fixname"};
 			Args = {"player"};
 			Description = "Put the target player(s)'s back to normal";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local humanoid = v.Character and v.Character:FindFirstChildOfClass("Humanoid")
@@ -6349,7 +6378,7 @@ return function(Vargs, env)
 			Commands = {"package", "givepackage", "setpackage", "bundle"};
 			Args = {"player", "id"};
 			Description = "Gives the target player(s) the desired package (ID MUST BE A NUMBER)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				assert(args[1] and args[2] and tonumber(args[2]), "Missing player name")
 				assert(args[1] and args[2] and tonumber(args[2]), "Missing or invalid package ID")
@@ -6454,7 +6483,7 @@ return function(Vargs, env)
 			Commands = {"loopheal"};
 			Args = {"player"};
 			Description = "Continuously heals the target player(s)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					task.defer(function()
@@ -6481,7 +6510,7 @@ return function(Vargs, env)
 			Commands = {"unloopheal"};
 			Args = {"player"};
 			Description = `Undoes {Settings.Prefix}loopheal`;
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					service.StopLoop(`{v.UserId}LOOPHEAL`)
@@ -6492,7 +6521,7 @@ return function(Vargs, env)
 		ServerLog = {
 			Prefix = Settings.Prefix;
 			Commands = {"serverlog", "serverlogs", "serveroutput"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "View server log";
 			AdminLevel = "Moderators";
 			NoFilter = true;
@@ -6522,7 +6551,7 @@ return function(Vargs, env)
 					Title = "Server Log";
 					Table = Logs.ListUpdaters.ServerLog(plr);
 					Update = "ServerLog";
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Stacking = true;
 					Sanitize = true;
 					TextSelectable = true;
@@ -6533,7 +6562,7 @@ return function(Vargs, env)
 		LocalLog = {
 			Prefix = Settings.Prefix;
 			Commands = {"locallog", "clientlog", "locallogs", "localoutput", "clientlogs"};
-			Args = {"player", "autoupdate? (default: false)"};
+			Args = {"player", "autoupdate? (default: true)"};
 			Description = "View local log";
 			AdminLevel = "Moderators";
 			NoFilter = true;
@@ -6547,7 +6576,7 @@ return function(Vargs, env)
 						Table = Logs.ListUpdaters.LocalLog(plr, v);
 						Update = "LocalLog";
 						UpdateArg = v;
-						AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+						AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 						Stacking = true;
 						Sanitize = true;
 						TextSelectable = true;
@@ -6559,9 +6588,9 @@ return function(Vargs, env)
 		ErrorLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"errorlogs", "debuglogs", "errorlog", "errors", "debuglog", "scripterrors", "adminerrors"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "View script error log";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			ListUpdater = function(plr: Player)
 				local Count = if Logs.Errors.__meta == "DLL" then Logs.Errors.count else #Logs.Errors
 				local tab = table.create(Count)
@@ -6585,7 +6614,7 @@ return function(Vargs, env)
 					Table = Logs.ListUpdaters.ErrorLogs(plr);
 					Dots = true;
 					Update = "ErrorLogs";
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Sanitize = true;
 					Stacking = true;
 					TextSelectable = true;
@@ -6596,7 +6625,7 @@ return function(Vargs, env)
 		ExploitLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"exploitlogs", "exploitlog"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "View the exploit logs for the server OR a specific player";
 			AdminLevel = "Moderators";
 			ListUpdater = "Exploit";
@@ -6606,7 +6635,7 @@ return function(Vargs, env)
 					Tab = Logs.ListUpdaters.ExploitLogs(plr);
 					Dots = true;
 					Update = "ExploitLogs";
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Sanitize = true;
 					Stacking = true;
 				})
@@ -6616,7 +6645,7 @@ return function(Vargs, env)
 		JoinLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"joinlogs", "joins", "joinhistory"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "Displays the current join logs for the server";
 			AdminLevel = "Moderators";
 			ListUpdater = "Joins";
@@ -6627,7 +6656,7 @@ return function(Vargs, env)
 					Dots = true;
 					Update = "JoinLogs";
 					TextSelectable = true;
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 				})
 			end
 		};
@@ -6635,7 +6664,7 @@ return function(Vargs, env)
 		LeaveLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"leavelogs", "leaves", "leavehistory"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "Displays the current leave logs for the server";
 			AdminLevel = "Moderators";
 			ListUpdater = "Leaves";
@@ -6646,7 +6675,7 @@ return function(Vargs, env)
 					Dots = true;
 					Update = "LeaveLogs";
 					TextSelectable = true;
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 				})
 			end
 		};
@@ -6654,7 +6683,7 @@ return function(Vargs, env)
 		ChatLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"chatlogs", "chats", "chathistory"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "Displays the current chat logs for the server";
 			AdminLevel = "Moderators";
 			ListUpdater = "Chats";
@@ -6665,7 +6694,7 @@ return function(Vargs, env)
 					Dots = true;
 					Update = "ChatLogs";
 					TextSelectable = true;
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Sanitize = true;
 					Stacking = true;
 				})
@@ -6675,7 +6704,7 @@ return function(Vargs, env)
 		RemoteLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"remotelogs", "remotelog", "rlogs", "remotefires", "remoterequests"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "View the remote logs for the server";
 			AdminLevel = "Moderators";
 			ListUpdater = "RemoteFires";
@@ -6686,7 +6715,7 @@ return function(Vargs, env)
 					Dots = true;
 					Update = "RemoteLogs";
 					TextSelectable = true;
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Sanitize = true;
 					Stacking = true;
 				})
@@ -6696,7 +6725,7 @@ return function(Vargs, env)
 		ScriptLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"scriptlogs", "scriptlog", "adminlogs", "adminlog", "scriptlogs"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "View the admin logs for the server";
 			AdminLevel = "Moderators";
 			ListUpdater = "Script";
@@ -6707,7 +6736,7 @@ return function(Vargs, env)
 					Dots = true;
 					Update = "ScriptLogs";
 					TextSelectable = true;
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Sanitize = true;
 					Stacking = true;
 				})
@@ -6717,7 +6746,7 @@ return function(Vargs, env)
 		Logs = {
 			Prefix = Settings.Prefix;
 			Commands = {"logs", "log", "commandlogs"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "View the command logs for the server";
 			AdminLevel = "Moderators";
 			ListUpdater = function(plr: Player)
@@ -6744,7 +6773,7 @@ return function(Vargs, env)
 					Dots = true;
 					Update = "Logs";
 					TextSelectable = true;
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Sanitize = true;
 					Stacking = true;
 				})
@@ -6754,7 +6783,7 @@ return function(Vargs, env)
 		OldLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"oldlogs", "oldserverlogs", "oldcommandlogs"};
-			Args = {"autoupdate? (default: false)"};
+			Args = {"autoupdate? (default: true)"};
 			Description = "View the command logs for previous servers ordered by time";
 			AdminLevel = "Moderators";
 			ListUpdater = function(plr: Player)
@@ -6781,7 +6810,7 @@ return function(Vargs, env)
 					Dots = true;
 					Update = "OldLogs";
 					TextSelectable = true;
-					AutoUpdate = if args[1] and (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
 					Sanitize = true;
 					Stacking = true;
 					TimeOptions = {
@@ -6794,12 +6823,12 @@ return function(Vargs, env)
 		ShowLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"showlogs", "showcommandlogs"};
-			Args = {"player", "autoupdate? (default: false)"};
+			Args = {"player", "autoupdate? (default: true)"};
 			Description = "Shows the target player(s) the command logs.";
 			AdminLevel = "Moderators";
 			Function = function(plr: Player, args: {string})
 				local autoUpdate = false
-				if args[2] and table.find({"yes", "true", "1", "autoupdate", "on"}, args[2]:lower()) then
+				if not args[2] or table.find({"yes", "true", "1", "autoupdate", "on"}, args[2]:lower()) then
 					autoUpdate = true
 				end
 				local str = `{Settings.Prefix}logs {tostring(autoUpdate) or ""}`
@@ -6919,7 +6948,7 @@ return function(Vargs, env)
 			Commands = {"freecam"};
 			Args = {"player"};
 			Description = "Makes it so the target player(s)'s cam can move around freely (Press Shift+P, F, or DPadLeft to toggle freecam)";
-			AdminLevel = "Moderators";
+			AdminLevel = "Tester";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local plrgui = v:FindFirstChildOfClass("PlayerGui")
@@ -6943,7 +6972,7 @@ return function(Vargs, env)
 			Commands = {"unfreecam"};
 			Args = {"player"};
 			Description = "UnFreecam";
-			AdminLevel = "Moderators";
+			AdminLevel = "Tester";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local plrgui = v:FindFirstChildOfClass("PlayerGui")
@@ -6966,7 +6995,7 @@ return function(Vargs, env)
 			Commands = {"togglefreecam"};
 			Args = {"player"};
 			Description = "Toggles Freecam";
-			AdminLevel = "Moderators";
+			AdminLevel = "Tester";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local plrgui = v:FindFirstChildOfClass("PlayerGui")
@@ -6985,7 +7014,7 @@ return function(Vargs, env)
 			Commands = {"bot", "trainingbot"};
 			Args = {"player", "num (max: 50)", "walk", "attack", "friendly", "health", "speed", "damage"};
 			Description = "AI bots made for training; ':bot scel 5 true true'";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local num = tonumber(args[2]) and math.clamp(tonumber(args[2]), 1, 50) or 1
 				local health = tonumber(args[6]) or 100
@@ -7080,7 +7109,7 @@ return function(Vargs, env)
 			Commands = {"perfstats", "performancestats", "serverstats"};
 			Args = {"autoupdate? (default: true)"};
 			Description = "Shows you technical server performance statistics";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			ListUpdater = function(plr: Player)
 				local perfStats = {
 					{"ContactsCount"; "How many parts are currently in contact with one another"},
@@ -7255,7 +7284,7 @@ return function(Vargs, env)
 			Commands = {"incognitolist", "incognitoplayers"};
 			Args = {"autoupdate? (default: true)"};
 			Description = "Displays a list of incognito players in the server";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			ListUpdater = function(plr: Player)
 				local tab = {}
 				for p: Player, t: table in Variables.IncognitoPlayers do
