@@ -515,6 +515,7 @@ return function(Vargs, GetEnv)
 					return
 				end
 			end
+
 			if #msg > Process.MsgStringLimit and type(p) == "userdata" and p:IsA("Player") and not Admin.CheckAdmin(p) then
 				msg = string.sub(msg, 1, Process.MsgStringLimit)
 			end
@@ -1024,18 +1025,28 @@ return function(Vargs, GetEnv)
 
 			Variables.IncognitoPlayers[p] = nil
 
-			if p and Admin.GetLevel(p) > 0 and Variables.ShiftPlayers and Variables.ShiftPlayers[p.UserId] then
-				Variables.ShiftPlayers[p.UserId] = nil
-			end
-
-			task.spawn(function() 
-				task.wait(300)
-				if isIngame[p] == true then
-					return
-				else
-					server.Variables.shiftPlayers[p.UserId] = nil
+			local OnShift = server.Variables.shiftPlayers[p.UserId]
+			if OnShift then
+				Functions.Notify("Notification", `You are no longer on shift.`, {p}, 10)
+				local elapsed = os.time() - server.Variables.shiftPlayers[p.UserId].StartTime
+				local function formatTime(seconds)
+				    if seconds < 60 then
+				        return string.format("%d seconds", seconds)
+				    elseif seconds < 3600 then
+				        local minutes = math.floor(seconds / 60)
+				        local secs = seconds % 60
+				        return string.format("%d minute%s %d second%s", minutes, minutes ~= 1 and "s" or "", secs, secs ~= 1 and "s" or "")
+				    else
+				        local hours = math.floor(seconds / 3600)
+				        local minutes = math.floor((seconds % 3600) / 60)
+				        local secs = seconds % 60
+				        return string.format("%d hour%s %d minute%s %d second%s", hours, hours ~= 1 and "s" or "", minutes, minutes ~= 1 and "s" or "", secs, secs ~= 1 and "s" or "")
+				    end
 				end
-			end)
+				local formattedTime = formatTime(elapsed)
+				Functions.LogShiftAction(p, "Shift has been ended.", "\n\nTotal Shift Time: " .. formattedTime, 15548997)
+				server.Variables.shiftPlayers[p.UserId] = nil
+			end
 
 			task.spawn(function()
 				while game.JobId == "" do

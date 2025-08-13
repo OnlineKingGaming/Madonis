@@ -36,6 +36,84 @@ return function(Vargs, GetEnv)
 		end
 	end)
 
+	if isReservedServer then
+		task.defer(function()
+			local waitTime = 10
+			local playersToTeleport = {}
+			local teleported = {}
+			local jobid
+			local MAX_RETRIES = 4
+			local RETRY_WAIT = 1.5
+
+			local startTask, TeleportTask = service.Threads.NewTask("Teleport Players", function()
+				jobid = TeleportService:TeleportPartyAsync(game.PlaceId, playersToTeleport, {[PARAMETER_2_NAME] = true})
+			end)
+
+			local function teleportWithRetry(player)
+				local joindata = player:GetJoinData()
+				local data = type(joindata) == "table" and joindata.TeleportData
+				if type(data) == "table" and data[PARAMETER_NAME] then
+					Functions.Message("Adonis", "Server Restart", "You are being teleported back into the Main Game. Please be patient", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 10000)
+					task.wait(waitTime)
+					local tries = 0
+					local success = false
+					repeat
+						tries = tries + 1
+						if not player or not player.Parent then
+							Logs:AddLog("Errors", "Teleport failed: Player " .. tostring(player and player.Name or "[nil]") .. " is no longer in game.")
+							break
+						end
+						local ok, err = pcall(function()
+							TeleportService:Teleport(game.PlaceId, player, {[PARAMETER_2_NAME] = true})
+						end)
+						if ok then
+							success = true
+							teleported[player] = true
+							Logs:AddLog("Script", "Teleported " .. player.Name .. " back to the main game.")
+						else
+							Logs:AddLog("Errors", "Teleport error for " .. player.Name .. ": " .. tostring(err) .. " (try " .. tries .. "/" .. MAX_RETRIES .. ")")
+							task.wait(RETRY_WAIT * tries)
+						end
+					until success or tries >= MAX_RETRIES
+					if not success then
+						Functions.Notification("Teleport failed", "Could not teleport " .. player.Name .. ". Please rejoin manually.", {player}, 30, "MatIcon://Error")
+						Logs:AddLog("Errors", "Final teleport failure for " .. player.Name)
+					end
+				end
+			end
+
+			if #service.Players:GetPlayers() == 0 then
+				service.Players.PlayerAdded:Wait()
+			end
+
+			local playerAddedConn
+			playerAddedConn = service.Players.PlayerAdded:Connect(function(player)
+				teleportWithRetry(player)
+			end)
+
+			for _, player in service.Players:GetPlayers() do
+				teleportWithRetry(player)
+			end
+
+			-- Wait for all players to leave, but timeout after 30 seconds
+			local startTime = os.clock()
+			while #service.Players:GetPlayers() > 0 and (os.clock() - startTime) < 30 do
+				service.Players.PlayerRemoving:Wait()
+			end
+
+			if playerAddedConn then
+				playerAddedConn:Disconnect()
+			end
+
+			-- Kick any remaining players
+			local remaining = service.Players:GetPlayers()
+			for _, v in remaining do
+				v:Kick("Server is restarting. Please rejoin.")
+			end
+			Logs:AddLog("Script", "SoftShutdown (reserved server) complete. All players teleported or kicked.")
+		end)
+	end
+
 	Remote.Terminal.Commands.SoftShutdown = {
 		Usage = "restart";
 		Command = "restart";
@@ -45,6 +123,7 @@ return function(Vargs, GetEnv)
 			if service.RunService:IsStudio() then return end
 			if #Players:GetPlayers() == 0 then return end
 
+			local newserver = TeleportService:ReserveServer(game.PlaceId)
 			Functions.Message("Adonis", "Server Restart", "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
 			
 			task.wait(2)
@@ -54,11 +133,11 @@ return function(Vargs, GetEnv)
 			end
 
 			Logs:AddLog("Script", `Teleporting {#Players:GetPlayers()} players to a temporary softshutdown server`)
-			TeleportService:TeleportAsync(game.PlaceId, Players:GetPlayers())
+			TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, Players:GetPlayers(), "", {[PARAMETER_NAME] = true})
 			Players.PlayerAdded:Connect(function(player)
 				Logs:AddLog("Script", `Teleporting {player.Name} to a temporary softshutdown server`)
 				teleportedPlayers[player] = 1
-				TeleportService:TeleportAsync(game.PlaceId, { player })
+				TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, { player }, "", {[PARAMETER_NAME] = true})
 			end)
 			task.delay(60, function()
 				Variables.ServerLock = true
@@ -69,6 +148,7 @@ return function(Vargs, GetEnv)
 			end
 		end
 	}
+
 	Commands.SoftShutdown = {
 		Prefix = Settings.Prefix;
 		Commands = {"softshutdown", "restart", "sshutdown", "restartserver"};
@@ -80,55 +160,72 @@ return function(Vargs, GetEnv)
 		Function = function(plr: Player, args: {string})
 			if #Players:GetPlayers() == 0 then return end
 
+			-- Log shutdown reason
 			if Core.DataStore then
 				Core.UpdateData("ShutdownLogs", function(logs)
-					if plr then
-						table.insert(logs, 1, {
-							User = plr.Name,
-							Restart = true,
-							Time = os.time(),
-							Reason = args[1] or "N/A"
-						})
-					else
-						table.insert(logs, 1, {
-							User = "[Server]",
-							Restart = true,
-							Time = os.time(),
-							Reason = args[1] or "N/A"
-						})
-					end
-
+					table.insert(logs, 1, {
+						User = plr and plr.Name or "[Server]",
+						Restart = true,
+						Time = os.time(),
+						Reason = args[1] or "N/A"
+					})
 					if #logs > Logs.OldCommandLogsLimit then
 						table.remove(logs, #logs)
 					end
-
 					return logs
 				end)
 			end
 
-			Functions.Message("Adonis", "Server Restart", "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
-			
-			task.wait(1)
+			-- Lock server immediately to prevent new joins
+			Variables.ServerLock = true
 
-			for _, v in Players:GetPlayers() do
-				teleportedPlayers[v] = 1
+			local newserver = TeleportService:ReserveServer(game.PlaceId)
+			Functions.Message("Adonis", "Server Restart", "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
+
+			-- Helper to teleport a player with retries and error handling
+			local function teleportPlayer(player)
+				local success, err = pcall(function()
+					teleportedPlayers[player] = 1
+					TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, { player }, "", {[PARAMETER_NAME] = true})
+				end)
+				if not success then
+					Logs:AddLog("Errors", `Teleport error for {player.Name}: {err}`)
+					Functions.Notification("Teleport failed", `Could not teleport {player.Name}. Please rejoin manually.`, {player}, 30, "MatIcon://Error")
+				end
 			end
 
-			Logs:AddLog("Script", `Teleporting {#Players:GetPlayers()} players to a temporary softshutdown server`)
-			TeleportService:TeleportAsync(game.PlaceId, Players:GetPlayers())
-			Players.PlayerAdded:Connect(function(player)
+			-- Teleport all current players
+			local currentPlayers = Players:GetPlayers()
+			for _, v in currentPlayers do
+				teleportPlayer(v)
+			end
+
+			Logs:AddLog("Script", `Teleporting {#currentPlayers} players to a temporary softshutdown server`)
+
+			-- Listen for new players and teleport them
+			local playerAddedConn
+			playerAddedConn = Players.PlayerAdded:Connect(function(player)
 				Logs:AddLog("Script", `Teleporting {player.Name} to a temporary softshutdown server`)
-				teleportedPlayers[player] = 1
-				TeleportService:TeleportAsync(game.PlaceId, { player })
-			end)
-			task.delay(60, function()
-				Variables.ServerLock = true
+				teleportPlayer(player)
 			end)
 
-			while #Players:GetPlayers() > 0 do
+			-- Wait for all players to leave, but timeout after 30 seconds
+			local startTime = os.clock()
+			while #Players:GetPlayers() > 0 and (os.clock() - startTime) < 30 do
 				Players.PlayerRemoving:Wait()
 			end
-			-- done
+
+			-- Disconnect event to avoid leaks
+			if playerAddedConn then
+				playerAddedConn:Disconnect()
+			end
+
+			-- If any players remain after timeout, kick them
+			local remaining = Players:GetPlayers()
+			for _, v in remaining do
+				v:Kick("Server is restarting. Please rejoin.")
+			end
+			Logs:AddLog("Script", "SoftShutdown complete. All players teleported or kicked.")
 		end
 	}
 	Commands.GlobalSoftShutdown = {
