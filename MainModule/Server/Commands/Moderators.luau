@@ -2810,8 +2810,7 @@ return function(Vargs, env)
 				local function addTracker(target: Player)
 					local char = target.Character
 					if not char then
-						Functions.Hint(`{service.FormatPlayer(target)} doesn't currently have a character`, { plr })
-						return
+						target.CharacterAdded:Wait()
 					end
 
 					local rootPart = char:FindFirstChild("HumanoidRootPart")
