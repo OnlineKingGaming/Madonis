@@ -9,8 +9,21 @@
 
 			"Madonis": {
 				"$className": "Folder",
-				"MainModule": {
-					"$path": "MainModule"
+				"Madonis_MainModule": {
+					"$className": "Model",
+					"MainModule": {
+						"$path": "MainModule"
+					},
+					"PackageLink": {
+						"$className": "PackageLink",
+						"$properties": {
+							"PermissionLevel": "Edit",
+        					"PackageAssetName": "Madonis_MainModule",
+        					"Creator": "GDP_OnlineKing123",
+        					"AutoUpdate": false,
+        					"PackageId": "rbxassetid://94525397282944"
+						}
+					}
 				},
 
 				"LICENSE": {

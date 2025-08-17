@@ -115,9 +115,9 @@ else
 	--if data.DebugMode then
 		local found = false
 		for _, v in model.Parent:GetChildren() do
-			if v.Name == "MainModule" and v:IsA("ModuleScript") then
+			if v.Name == "Madonis_MainModule" and v:IsA("Model") then
 				print("Found Madonis MainModule in", v:GetFullName())
-				moduleId, found = v, true
+				moduleId, found = v.MainModule, true
 				break
 			end
 		end
