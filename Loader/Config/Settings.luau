@@ -305,11 +305,11 @@ settings.AgeRestrictedCommands = true	-- Are age-locked commands enabled?
 settings.WarnDangerousCommand = false	-- Do dangerous commands ask for confirmation?
 settings.CommandFeedback = false		-- Should players be notified when commands with non-obvious effects are run on them?
 settings.CrossServerCommands = true		-- Are commands which affect more than one server enabled?
-settings.ChatCommands = false			-- If false you will not be able to run commands via the chat; Instead, you MUST use the console or you will be unable to run commands
+settings.ChatCommands = true			-- If false you will not be able to run commands via the chat; Instead, you MUST use the console or you will be unable to run commands
 settings.CreatorPowers = true			-- Gives me creator-level admin; This is strictly used for debugging; I can't debug without full access to the script
 settings.CodeExecution = false			-- Enables the use of code execution in Adonis. Scripting related (such as ;s) and a few other commands require this
 settings.SilentCommandDenials = true	-- If true, there will be no differences between the error messages shown when a user enters an invalid command and when they have insufficient permissions for the command
-settings.OverrideChatCallbacks = false		-- If the TextChatService ShouldDeliverCallbacks of all channels are overridden by Adonis on load. Required for slowmode. Mutes use a CanSend method to mute when this is set to false.
+settings.OverrideChatCallbacks = true		-- If the TextChatService ShouldDeliverCallbacks of all channels are overridden by Adonis on load. Required for slowmode. Mutes use a CanSend method to mute when this is set to false.
 
 settings.BanMessage = "Madonis | You have been banned."				-- Message shown to banned users upon kick
 settings.LockMessage = "Madonis | This Server is locked."	-- Message shown to people when they are kicked while the game is ;slocked

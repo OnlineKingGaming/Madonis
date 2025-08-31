@@ -68,9 +68,7 @@ return function(Vargs, GetEnv)
 
 		--// Hide TextChatComands
 		task.defer(function()
-			if Remote.Get("Variable", "ChatCreateRobloxCommands") then
-				Process.HandleTextChatCommands()
-			end
+			Process.HandleTextChatCommands()
 		end)
 
 		Process.RunAfterLoaded = nil;
