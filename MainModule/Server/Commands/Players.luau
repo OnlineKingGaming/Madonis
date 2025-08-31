@@ -30,7 +30,7 @@ return function(Vargs, env)
 					end
 
 					for _,alias in cmd.Commands do
-						if #cmdAliases >= 4 and (#cmd.Commands - #cmdAliases) ~= 0 then
+						if #cmdAliases >= 6 and (#cmd.Commands - #cmdAliases) ~= 0 then
 							table.insert(cmdAliases, `and {#cmd.Commands - #cmdAliases} more...`)
 							break
 						end
@@ -772,7 +772,7 @@ Paint = {
 			Description = "Opens the Roblox avatar inspect menu for the specified player";
 			AdminLevel = "Players";
 			Function = function(plr: Player, args: {string})
-				for _, v: Player in service.GetPlayers(plr, args[1]) do
+				for _, v: Player in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
 					Remote.LoadCode(plr, `service.GuiService:InspectPlayerFromUserId({v.UserId})`)
 				end
 			end
@@ -892,7 +892,7 @@ Paint = {
 			AdminLevel = "Players";
 			Function = function(plr: Player, args: {string})
 				local elevated: boolean = Admin.CheckAdmin(plr)
-				local players = service.GetPlayers(plr, args[1], {NoFakePlayer = true; NoSelectors = not elevated;})
+				local players = service.GetPlayers(plr, args[1], {NoSelectors = not elevated})
 
 				if #players > 2 then
 					Functions.Hint(string.format("Loading profile data for %d players... [This may take a while]", #players), {plr})

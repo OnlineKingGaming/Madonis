@@ -312,7 +312,6 @@ locals = {
 	Pcall = Pcall;
 };
 
-
 service = require(Folder.Parent.Shared.Service)(function(eType, msg, desc, ...)
 	local extra = table.pack(...)
 	if eType == "MethodError" then
@@ -508,6 +507,13 @@ return service.NewProxy({
 			end
 		end
 
+		if data.NightlyMode then -- Wrap things that should be wrapped?
+			for _, v in {"Folder", "Deps", "CommandModules", "Client", "Dependancies", "PluginsFolder"} do
+				server[v] = service.Wrap(server[v])
+			end
+			locals.Folder = service.Wrap(locals.Folder)
+		end
+
 		if data.DebugMode == true then
 			if not silentStartup then
 				warn("Adonis was loaded with DebugMode enabled; This is intended for development use only, certain debug features intended for development use will be enabled, which can weaken Adonis's security in a production environment.")
@@ -593,7 +599,7 @@ return service.NewProxy({
 		end
 
 		--// Attempts to patch Settings.Prefix to fix issues
-		if type(server.Settings.Prefix) == "table" then
+		if type(server.Settings.Prefix) == "table" then -- TODO: Move to backwards compatibility module?
 			setmetatable(server.Settings.Prefix, {
 				__concat = function(self, value)
 					return `{self[1]}{value}`
@@ -601,13 +607,12 @@ return service.NewProxy({
 				__tostring = function(self)
 					return self[1]
 				end,
-
+				__index = string, -- Fix backwards compatibility for namecall usage of prefix
+				__eq = function(self, v)
+					return rawequal(self, v) or table.find(self, v) or service.CompareTables(self, v) or false
+				end,
 			})
 		end
-
-
-
-
 
 		--// Bind cleanup
 		service.DataModel:BindToClose(function(...)

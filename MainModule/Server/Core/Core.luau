@@ -136,12 +136,7 @@ return function(Vargs, GetEnv)
 			SavedTables = 	"32K5j4";
 		};
 
-		DS_WHITELIST = table.freeze({
-			Banned = true
-		--ideas here pls
-		});
-
-		DS_BLACKLIST = table.freeze({
+		DS_BLACKLIST = {
 			Trello_Enabled = true;
 			Trello_Primary = true;
 			Trello_Secondary = true;
@@ -195,15 +190,15 @@ return function(Vargs, GetEnv)
 
 			--// Not gonna let malicious stuff set DS_Blacklist to {} or anything!
 			DS_BLACKLIST = true;
-		});
+		};
 
 		--// Prevent certain keys from loading from the DataStore
-		PlayerDataKeyBlacklist = table.freeze({
+		PlayerDataKeyBlacklist = {
 			AdminRank = true;
 			AdminLevel = true;
 			LastLevelUpdate = true;
 			Groups = true;
-		});
+		};
 		
 		UpdatePlayerConnection = function(p)
 			for i, cli in next,service.NetworkServer:GetChildren() do
@@ -849,7 +844,6 @@ return function(Vargs, GetEnv)
 					else
 						logError(`DataStore RemoveAsync Failed: {ret}`)
 					end
-					task.wait(6)
 				end, 120, true)
 
 				if not ran2 then
@@ -875,8 +869,6 @@ return function(Vargs, GetEnv)
 						else
 							logError(`DataStore SetAsync Failed: {ret}`);
 						end
-
-						task.wait(6)
 					end, 120, true)
 
 					if not ran2 then
@@ -910,8 +902,6 @@ return function(Vargs, GetEnv)
 						logError(`DataStore UpdateAsync Failed: {ret}`)
 						return error(ret)
 					end
-
-					task.wait(6)
 				end, 120, true) --// 120 timeout, yield until this queued function runs and completes
 
 				if not ran2 then
@@ -930,7 +920,7 @@ return function(Vargs, GetEnv)
 			end
 		end;
 
-		GetData = function(key: string, repeatCount: number?)
+		GetData = function(key: string, repeatCount: number?, showStatus: boolean?)
 			if repeatCount then
 				warn(`Retrying GetData request for {key}`)
 			end
@@ -958,11 +948,19 @@ return function(Vargs, GetEnv)
 					--// Attempt 3 times, with slight delay between if failed
 					task.wait(1)
 					if not repeatCount then
-						return Core.GetData(key, 3)
+						return Core.GetData(key, 3, showStatus)
 					elseif repeatCount > 0 then
-						return Core.GetData(key, repeatCount - 1)
+						return Core.GetData(key, repeatCount - 1, showStatus)
 					end
+					-- 
+					if showStatus then
+						return nil, false
+					end
+					return nil
 				else
+					if showStatus then
+						return err2, true
+					end
 					return err2
 				end
 			end
@@ -970,9 +968,8 @@ return function(Vargs, GetEnv)
 
 		IndexPathToTable = function(tableAncestry)
 			local ds_blacklist = Core.DS_BLACKLIST
-			local ds_whitelist = Core.DS_WHITELIST
 
-			if type(tableAncestry) == "string" and (not ds_blacklist[tableAncestry] or ds_whitelist[tableAncestry]) then
+			if type(tableAncestry) == "string" and not ds_blacklist[tableAncestry] then
 				return Settings[tableAncestry], tableAncestry
 			elseif type(tableAncestry) == "table" then
 				local curTable = server
@@ -1006,7 +1003,7 @@ return function(Vargs, GetEnv)
 					end
 				end
 
-				if type(curName) == "string" and (ds_blacklist[curName] or not ds_whitelist[curName]) then
+				if type(curName) == "string" and ds_blacklist[curName] then
 					return nil
 				end
 
@@ -1030,16 +1027,21 @@ return function(Vargs, GetEnv)
 		end;
 
 		GetTableKey = function(indList: {string})
-			local tabs = Core.GetData("SavedTables") or {}
+			local tabs, SuccessSavedTables = Core.GetData("SavedTables", nil, true)
 			local realTable, tableName = Core.IndexPathToTable(indList)
 
 			local foundTable = nil
 
-			for _, v in tabs do
+			for _, v in tabs or {} do
 				if type(v) == "table" and v.TableName and v.TableName == tableName then
 					foundTable = v
 					break
 				end
+			end
+			
+			if not tableName then
+				-- No table found, ditch data! Malicious maybe?
+				return false;
 			end
 
 			if not foundTable then
@@ -1049,10 +1051,13 @@ return function(Vargs, GetEnv)
 				}
 
 				table.insert(tabs, foundTable)
-				Core.SetData("SavedTables", tabs)
+				if SuccessSavedTables then
+					Core.SetData("SavedTables", tabs)
+				end
 			end
-
-			if not Core.GetData(foundTable.TableKey) then
+			
+			local Data, Success = Core.GetData(foundTable.TableKey, nil, true) 
+			if not Success then
 				Core.SetData(foundTable.TableKey, {})
 			end
 
@@ -1076,6 +1081,11 @@ return function(Vargs, GetEnv)
 				local tab = data.Table
 				local val = data.Value
 				local key = Core.GetTableKey(tab)
+
+				if not key then
+					-- No key found? Can't update !
+					return
+				end
 
 				--// Storing an old reference of data.Table as we may override it later on.
 				local originalTable = tab
@@ -1127,6 +1137,11 @@ return function(Vargs, GetEnv)
 				local originalTable = tab
 				local val = data.Value
 				local key = Core.GetTableKey(tab)
+
+				if not key then
+					-- No key found? Can't update !
+					return
+				end
 
 				if type(tab) == "string" then
 					tab = {"Settings", tab}
@@ -1189,7 +1204,6 @@ return function(Vargs, GetEnv)
 
 			local CheckMatch = if type(data) == "table" and data.LaxCheck then Functions.LaxCheckMatch else Functions.CheckMatch
 			local ds_blacklist = Core.DS_BLACKLIST
-			local ds_whitelist = Core.DS_WHITELIST
 
 			if key == "TableUpdate" then
 				local indList = data.Table
@@ -1209,7 +1223,7 @@ return function(Vargs, GetEnv)
 				local displayName = type(indList) == "table" and table.concat(indList, ".") or tableName
 
 				if type(displayName) == "string" then
-					if ds_blacklist[displayName] or not ds_whitelist[displayName] then
+					if ds_blacklist[displayName] then
 						return
 					end
 
@@ -1264,15 +1278,17 @@ return function(Vargs, GetEnv)
 
 				if Core.DataStore and Settings.DataStoreEnabled then
 
+					local SuccessSettings, SuccessTables = false, false
+					
 					local GetData, LoadData, SaveData, DoSave = Core.GetData, Core.LoadData, Core.SaveData, Core.DoSave
 					if not key then
-						SavedSettings = GetData("SavedSettings")
-						SavedTables = GetData("SavedTables")
+						SavedSettings, SuccessSettings = GetData("SavedSettings", nil, true)
+						SavedTables, SuccessTables = GetData("SavedTables", nil, true)
 					elseif key and not data then
 						if key == "SavedSettings" then
-							SavedSettings = GetData("SavedSettings")
+							SavedSettings, SuccessSettings = GetData("SavedSettings", nil, true)
 						elseif key == "SavedTables" then
-							SavedTables = GetData("SavedTables")
+							SavedTables, SuccessTables = GetData("SavedTables", nil, true)
 						end
 					elseif key and data then
 						if key == "SavedSettings" then
@@ -1283,12 +1299,12 @@ return function(Vargs, GetEnv)
 					end
 
 					if not key and not data then
-						if not SavedSettings then
+						if not SavedSettings and SuccessSettings then
 							SavedSettings = {}
 							SaveData("SavedSettings", {})
 						end
 
-						if not SavedTables then
+						if not SavedTables and SuccessTables then
 							SavedTables = {}
 							SaveData("SavedTables", {})
 						end
@@ -1296,7 +1312,7 @@ return function(Vargs, GetEnv)
 
 					if SavedSettings then
 						for setting, value in SavedSettings do
-							if not ds_blacklist[setting] or ds_whitelist[setting] then
+							if not ds_blacklist[setting] then
 
 								if setting == "Prefix" or setting == "AnyPrefix" or setting == "SpecialPrefix" then
 									local orig = Settings[setting]
@@ -1314,7 +1330,7 @@ return function(Vargs, GetEnv)
 
 					if SavedTables then
 						for index, tData in SavedTables do
-							if tData.TableName and tData.TableKey and not ds_blacklist[tData.TableName] or ds_whitelist[tData.TableName] then
+							if tData.TableName and tData.TableKey and not ds_blacklist[tData.TableName] then
 								local data = GetData(tData.TableKey)
 								if data then
 									--// TODO: Possibly find a better way to "batch" TableUpdates to prevent script exhaustion

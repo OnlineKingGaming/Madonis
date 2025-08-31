@@ -15,25 +15,25 @@ return function(Vargs)
 	setfenv(1, env)
 
 	local _G, game, script, getfenv, setfenv, workspace,
-		getmetatable, setmetatable, loadstring, coroutine,
-		rawequal, typeof, print, math, warn, error,  pcall,
-		xpcall, select, rawset, rawget, ipairs, pairs,
-		next, Rect, Axes, os, time, Faces, unpack, string, Color3,
-		newproxy, tostring, tonumber, Instance, TweenInfo, BrickColor,
-		NumberRange, ColorSequence, NumberSequence, ColorSequenceKeypoint,
-		NumberSequenceKeypoint, PhysicalProperties, Region3int16,
-		Vector3int16, require, table, type, wait,
-		Enum, UDim, UDim2, Vector2, Vector3, Region3, CFrame, Ray, delay =
-			_G, game, script, getfenv, setfenv, workspace,
-			getmetatable, setmetatable, loadstring, coroutine,
-			rawequal, typeof, print, math, warn, error,  pcall,
-			xpcall, select, rawset, rawget, ipairs, pairs,
-			next, Rect, Axes, os, time, Faces, unpack, string, Color3,
-			newproxy, tostring, tonumber, Instance, TweenInfo, BrickColor,
-			NumberRange, ColorSequence, NumberSequence, ColorSequenceKeypoint,
-			NumberSequenceKeypoint, PhysicalProperties, Region3int16,
-			Vector3int16, require, table, type, wait,
-			Enum, UDim, UDim2, Vector2, Vector3, Region3, CFrame, Ray, delay
+	getmetatable, setmetatable, loadstring, coroutine,
+	rawequal, typeof, print, math, warn, error,  pcall,
+	xpcall, select, rawset, rawget, ipairs, pairs,
+	next, Rect, Axes, os, time, Faces, unpack, string, Color3,
+	newproxy, tostring, tonumber, Instance, TweenInfo, BrickColor,
+	NumberRange, ColorSequence, NumberSequence, ColorSequenceKeypoint,
+	NumberSequenceKeypoint, PhysicalProperties, Region3int16,
+	Vector3int16, require, table, type, wait,
+	Enum, UDim, UDim2, Vector2, Vector3, Region3, CFrame, Ray, delay =
+		_G, game, script, getfenv, setfenv, workspace,
+	getmetatable, setmetatable, loadstring, coroutine,
+	rawequal, typeof, print, math, warn, error,  pcall,
+	xpcall, select, rawset, rawget, ipairs, pairs,
+	next, Rect, Axes, os, time, Faces, unpack, string, Color3,
+	newproxy, tostring, tonumber, Instance, TweenInfo, BrickColor,
+	NumberRange, ColorSequence, NumberSequence, ColorSequenceKeypoint,
+	NumberSequenceKeypoint, PhysicalProperties, Region3int16,
+	Vector3int16, require, table, type, wait,
+	Enum, UDim, UDim2, Vector2, Vector3, Region3, CFrame, Ray, delay
 
 	local Anti, Process, UI, Variables
 	local script = script
@@ -296,13 +296,16 @@ return function(Vargs)
 						local screenshotHud = service.GuiService:FindFirstChildOfClass("ScreenshotHud")
 
 						for _, container in {Player.Character, service.StarterPack, Player:FindFirstChildOfClass("Backpack")} do
-							for _, v in ipairs(container:GetChildren()) do
+							for _, v: Instance in ipairs(container:GetChildren()) do
 								if v:IsA("BackpackItem") and service.Trim(v.TextureId) ~= "" then
 									table.insert(coreUrls, service.Trim(v.TextureId))
+								elseif v:IsA("MeshPart") then
+									table.insert(coreUrls, service.Trim(v.MeshId))
+									table.insert(coreUrls, service.Trim(v.TextureID)) -- For some reason, on MeshParts it's TextureID instead of TextureId
 								end
 							end
 						end
-								
+
 						if screenshotHud and service.Trim(screenshotHud.CameraButtonIcon) ~= "" then
 							table.insert(coreUrls, service.Trim(screenshotHud.CameraButtonIcon))
 						end
@@ -315,7 +318,7 @@ return function(Vargs)
 					local rawContentProvider = service.UnWrap(service.ContentProvider)
 					local workspace = service.UnWrap(workspace)
 					local tempDecal = service.UnWrap(Instance.new("Decal"))
-					tempDecal.Texture = "rbxasset://textures/face.png" -- Its a local asset and it's probably likely to never get removed, so it will never fail to load, unless the users PC is corrupted
+					tempDecal.Texture = "rbxasset://textures/face.png" -- It's a local asset and it's likely to never get removed, so it will never fail to load, unless the user's PC is corrupted
 					local coreUrls = getCoreUrls()
 
 					if not (service.GuiService.MenuIsOpen or service.ContentProvider.RequestQueueSize >= 50 or Player:GetNetworkPing() * 1000 >= 750) then
@@ -337,14 +340,14 @@ return function(Vargs)
 								end
 
 								hasDetected = true
-								Detected("Kick", "Disallowed content URL detected in CoreGui")
+								Detected("Kick", "Disallowed content URL detected in CoreGui: " ..url)
 							end
 						end)
 
 						tempDecal:Destroy()
 						task.wait(6)
-						if not activated then -- // Checks for anti-coregui detetection bypasses
-							Detected("kick", "Coregui detection bypass found")
+						if not activated then -- // Checks for Anti-CoreGui detection bypasses
+							Detected("kick", "CoreGui detection bypass found")
 						end
 					end
 
@@ -365,7 +368,7 @@ return function(Vargs)
 					then
 						Detected("kick", "Content provider spoofing detected")
 					end
-					
+
 					-- // GetFocusedTextBox detection
 					local textbox = service.UserInputService:GetFocusedTextBox()
 					local success, value = pcall(service.StarterGui.GetCore, service.StarterGui, "DeveloperConsoleVisible")
@@ -375,11 +378,11 @@ return function(Vargs)
 					if
 						textbox and Anti.RLocked(textbox) and not ((success and value) or service.GuiService.MenuIsOpen or (
 							service.Chat.LoadDefaultChat and
-							textChatService and
-							textChatService.ChatVersion == Enum.ChatVersion.TextChatService and
-							chatBarConfig and
-							chatBarConfig.Enabled
-						))
+								textChatService and
+								textChatService.ChatVersion == Enum.ChatVersion.TextChatService and
+								chatBarConfig and
+								chatBarConfig.Enabled
+							))
 					then
 						Detected("Kick", "Invalid CoreGui Textbox has been selected")
 					end
@@ -506,10 +509,12 @@ return function(Vargs)
 				"run_secure_function";  -- synapse specific (?)
 				"Kill by Avexus#1234 initialized";
 				--"FilteringEnabled Kill"; -- // Disabled due to potential of having false flags
+				"Depricated & Drop Support on"; -- VegaX detection
 				"Couldn't find target with input:";
 				"Found target with input:";
 				"Couldn't find the target's root part%. :[";
 				"HookMT"; --watameln was here :3
+				"UNC Environment Check"; -- exploiters love UNC check lol
 			}
 
 			local soundIds = {
@@ -517,13 +522,14 @@ return function(Vargs)
 			}
 
 			local function check(Message)
+				if 
+					string.find(string.lower(Message), "failed to load", 1, true) or
+					string.find(string.lower(Message), "meshcontentprovider failed to process", 1, true) or
+					string.find(string.lower(Message), "unknown 'active' animation:", 1, true)
+				then return false end
+
 				for _, v in lookFor do
-					if
-						not string.find(string.lower(Message), "failed to load", 1, true) and
-						not string.find(string.lower(Message), "meshcontentprovider failed to process", 1, true) and
-						not string.find(string.lower(Message), "unknown 'active' animation:", 1, true) and
-						(string.match(string.lower(Message), string.lower(v)) or string.match(Message, v))
-					then
+					if string.match(string.lower(Message), string.lower(v)) or string.match(Message, v) then
 						return true
 					end
 				end
@@ -537,10 +543,10 @@ return function(Vargs)
 					not service.UserInputService.TouchEnabled
 				then
 					if not pcall(function()
-						if not isStudio and (findService(game, "VirtualUser") or findService(game, "VirtualInputManager")) then
-							Detected("crash", "Disallowed Services Detected")
-						end
-					end) then
+							if not isStudio and (findService(game, "VirtualUser") or findService(game, "VirtualInputManager") or findService(game, "UGCValidationService")) then
+								Detected("crash", "Disallowed Services Detected")
+							end
+						end) then
 						Detected("kick", "Disallowed Services Finding Error")
 					end
 				end
@@ -558,8 +564,8 @@ return function(Vargs)
 			local function checkTool(t)
 				task.wait()
 
-				if t and (t:IsA("Tool") or t.ClassName == "HopperBin") and not t:FindFirstChild(Variables.CodeName) and service.Player:FindFirstChild("Backpack") and t:IsDescendantOf(service.Player.Backpack) then
-					if t.ClassName == "HopperBin" and (rawequal(t.BinType, Enum.BinType.Grab) or rawequal(t.BinType, Enum.BinType.Clone) or rawequal(t.BinType, Enum.BinType.Hammer) or rawequal(t.BinType, Enum.BinType.GameTool)) then
+				if t and t.ClassName == "HopperBin" and not t:FindFirstChild(Variables.CodeName) and service.Player:FindFirstChild("Backpack") and t:IsDescendantOf(service.Player.Backpack) then
+					if rawequal(t.BinType, Enum.BinType.Grab) or rawequal(t.BinType, Enum.BinType.Clone) or rawequal(t.BinType, Enum.BinType.Hammer) or rawequal(t.BinType, Enum.BinType.GameTool) then
 						Detected("kick", "Building Tools detected; "..tostring(t.BinType))
 					end
 				end
@@ -569,8 +575,8 @@ return function(Vargs)
 
 			service.DataModel.ChildAdded:Connect(checkServ)
 
-			service.PolicyService.ChildAdded:Connect(function(child)
-				if child:IsA("Sound") then
+			service.PolicyService.DescendantAdded:Connect(function(child) -- use .DescendantAdded to prevent CMDx's default .ChildAdded connection disabling from being effective
+				if child:IsA("Sound") and child.Parent == service.PolicyService then
 					for i = 1, 5 do
 						if soundIdCheck(child) then
 							Detected("crash", "CMDx Detected; "..tostring(child))
@@ -712,7 +718,7 @@ return function(Vargs)
 				if ran then
 					Detected("crash", "RobloxLocked usable")
 				end
-	
+
 				local function getDictionaryLenght(dictionary)
 					local len = 0
 
@@ -789,7 +795,7 @@ return function(Vargs)
 				end, function()
 					Detected("kick", "Tamper Protection 0x16C1D")
 				end)
-	
+
 				if gcinfo() ~= collectgarbage("count") then
 					Detected("kick", "GC spoofing detected")
 				end

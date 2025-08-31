@@ -348,50 +348,20 @@ return function(Vargs, env)
 						model.Name = targetName
 
 						local hum = model:FindFirstChildOfClass("Humanoid") or model:WaitForChild("Humanoid")
-
 						if hum then
-							if hum.RigType == Enum.HumanoidRigType.R15 then
-								hum:WaitForChild("BodyHeightScale").Value /= 2
-								hum:WaitForChild("BodyDepthScale").Value /= 2
-								hum:WaitForChild("BodyWidthScale").Value /= 2
-
-								for _, obj in model:GetDescendants() do
-									if obj:IsA("BasePart") then
-										obj.Massless = true
-										obj.CanCollide = false
-									end
-								end
-							elseif hum.RigType == Enum.HumanoidRigType.R6 then
-								local motors = {}
-								table.insert(motors, model.HumanoidRootPart:FindFirstChild("RootJoint"))
-								for _, motor in model.Torso:GetChildren() do
-									if motor:IsA("Motor6D") then table.insert(motors, motor) end
-								end
-								for _, motor in motors do
-									motor.C0 = CFrame.new((motor.C0.Position * 0.4)) * (motor.C0 - motor.C0.Position)
-									motor.C1 = CFrame.new((motor.C1.Position * 0.4)) * (motor.C1 - motor.C1.Position)
-								end
-
-								for _, v in model:GetDescendants() do
-									if v:IsA("BasePart") then
-										v.Size *= 0.4
-										v.Position = model.Torso.Position
-									elseif v:IsA("Accessory") and v:FindFirstChild("Handle") then
-										local handle = v.Handle
-										handle.AccessoryWeld.C0 = CFrame.new((handle.AccessoryWeld.C0.Position * 0.4)) * (handle.AccessoryWeld.C0 - handle.AccessoryWeld.C0.Position)
-										handle.AccessoryWeld.C1 = CFrame.new((handle.AccessoryWeld.C1.Position * 0.4)) * (handle.AccessoryWeld.C1 - handle.AccessoryWeld.C1.Position)
-										local mesh = handle:FindFirstChildOfClass("SpecialMesh")
-										if mesh then
-											mesh.Scale *= 0.4
-										end
-									elseif v:IsA("SpecialMesh") and v.Parent.Name ~= "Handle" and v.Parent.Name ~= "Head" then
-										v.Scale *= 0.4
-									end
+							model:ScaleTo(0.5)
+							for _, obj in model:GetDescendants() do
+								if obj:IsA("BasePart") then
+									obj.Massless = true
+									obj.CanCollide = false
 								end
 							end
-						end
+							hum.PlatformStand = if steal then hum.PlatformStand else true
 
-						hum.PlatformStand = if steal then hum.PlatformStand else true
+							if hum.RigType == Enum.HumanoidRigType.R6 then
+								model.PrimaryPart = model.HumanoidRootPart -- Making this consistant with R15
+							end
+						end
 
 						model:PivotTo(cfr)
 						handle.CFrame = cfr
@@ -411,7 +381,7 @@ return function(Vargs, env)
 						service.New("WeldConstraint", {
 							Parent = tool;
 							Part0 = handle;
-							Part1 = model:FindFirstChild("Left Leg") or model:FindFirstChild("LeftFoot");
+							Part1 = model:FindFirstChild("HumanoidRootPart");
 						})
 
 						tool.Parent = plr:FindFirstChildWhichIsA("Backpack")
@@ -1099,7 +1069,7 @@ return function(Vargs, env)
 		Sword = {
 			Prefix = Settings.Prefix;
 			Commands = {"sword", "givesword"};
-			Args = {"player", "allow teamkill (default: true)"};
+			Args = {"player", "allow teamkill (default: true)", "base dmg (default: 5)", "slash dmg (default: 10)", "lunge dmg (default: 30)"};
 			Description = "Gives the target player(s) a sword";
 			AdminLevel = "Leadership";
 			Fun = true;
@@ -1108,6 +1078,10 @@ return function(Vargs, env)
 				local config = sword:FindFirstChild("Configurations")
 				if config then
 					config.CanTeamkill.Value = if args[2] and args[2]:lower() == "false" then false else true
+					
+					config.BaseDamage.Value = if args[3] then assert(tonumber(args[3]), "Base Damage is not a number!") else 5
+					config.SlashDamage.Value = if args[4] then assert(tonumber(args[4]), "Slash Damage is not a number!") else 10
+					config.LungeDamage.Value = if args[5] then assert(tonumber(args[5]), "Lunge Damage is not a number!") else 30
 				end
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local Backpack = v:FindFirstChildOfClass("Backpack")
@@ -2865,7 +2839,8 @@ return function(Vargs, env)
 				local decal2 = decal1:Clone()
 				decal2.Face = "Front"
 				local sound = service.New("Sound")
-				sound.SoundId = "rbxassetid://138081566"
+				sound.SoundId = "rbxassetid://95156028272944" -- Alternative "rbxassetid://99986264226275" The old one that was used since audio purge: "rbxassetid://138081566"
+				sound.PlaybackSpeed = 0.22
 				sound.Looped = true
 				sound.Name = "ADONIS_ANIMATEAVATAR_SOUND"
 
@@ -3002,7 +2977,7 @@ return function(Vargs, env)
 				decal2.Name = "Nyan2"
 
 				local sound = service.New("Sound")
-				sound.SoundId = "rbxassetid://9067256917" -- Old audio 265125691 which is gone...
+				sound.SoundId = "rbxassetid://5008970630" -- Old audio 265125691 which is gone...
 				sound.Looped = true
 				sound.Name = "ADONIS_ANIMATEAVATAR_SOUND"
 
@@ -3045,6 +3020,11 @@ return function(Vargs, env)
 					avatarAnimator.Disabled = false
 
 					sound:Play()
+					task.delay(3.35*2, function() -- Simulate nyan cat song better
+						sound:Stop()
+						sound.SoundId = "rbxassetid://9067256917"
+						sound:Play()
+					end)
 				end
 			end
 		};
@@ -3757,18 +3737,20 @@ return function(Vargs, env)
 					end
 
 					local resizeAttributeValue = char:GetAttribute("Adonis_Resize")
-					if not resizeAttributeValue then
-						char:SetAttribute("Adonis_Resize", num)
-					elseif resizeAttributeValue * num < Variables.SizeLimit then
-						char:SetAttribute("Adonis_Resize", resizeAttributeValue * num)
-					else
-						Functions.Hint(string.format("Cannot resize %s's character by %g%%: size limit exceeded.", service.FormatPlayer(v), num*100), {plr})
-						continue
+					local function setSizeAttribute(Val)
+						if not resizeAttributeValue or Val < Variables.SizeLimit then
+							char:SetAttribute("Adonis_Resize", Val)
+						else
+							error(string.format("Cannot resize %s's character by %g%%: size limit exceeded.", service.FormatPlayer(v), num*100))
+						end
 					end
 
 					if human and char:IsA("Model") then
+						setSizeAttribute(num)
 						char:ScaleTo(num)
 					elseif human and human.RigType == Enum.HumanoidRigType.R15 then
+						setSizeAttribute((resizeAttributeValue or 1) * num)
+						
 						for _, val in human:GetChildren() do
 							if val:IsA("NumberValue") and val.Name:match(".*Scale") then
 								val.Value *= num
@@ -3776,6 +3758,8 @@ return function(Vargs, env)
 						end
 						fixDensity(char)
 					elseif human and human.RigType == Enum.HumanoidRigType.R6 then
+						setSizeAttribute((resizeAttributeValue or 1) * num)
+						
 						local motors = {}
 						table.insert(motors, char.HumanoidRootPart:FindFirstChild("RootJoint"))
 						for _, motor in char.Torso:GetChildren() do
@@ -3830,7 +3814,7 @@ return function(Vargs, env)
 
 		UnSeizure = {
 			Prefix = Settings.Prefix;
-			Commands = {"unseizure"};
+			Commands = {"unseizure", "unseize"};
 			Args = {"player"};
 			Description = "Removes the effects of the seizure command";
 			Fun = true;

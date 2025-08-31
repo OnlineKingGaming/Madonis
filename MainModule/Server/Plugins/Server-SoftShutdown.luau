@@ -1,6 +1,7 @@
 --// Originally written by Merely
 --// Edited by GitHub@LolloDev5123 and Irreflexive
 --// GitHub@Expertcoderz was here to make things look better
+--// GitHub@annoynumus was here to patch the return teleport
 
 return function(Vargs, GetEnv)
 	local server = Vargs.Server
@@ -53,32 +54,20 @@ return function(Vargs, GetEnv)
 				local joindata = player:GetJoinData()
 				local data = type(joindata) == "table" and joindata.TeleportData
 				if type(data) == "table" and data[PARAMETER_NAME] then
-					Functions.Message("Adonis", "Server Restart", "You are being teleported back into the Main Game. Please be patient", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 10000)
-					task.wait(waitTime)
-					local tries = 0
-					local success = false
-					repeat
-						tries = tries + 1
-						if not player or not player.Parent then
-							Logs:AddLog("Errors", "Teleport failed: Player " .. tostring(player and player.Name or "[nil]") .. " is no longer in game.")
-							break
-						end
-						local ok, err = pcall(function()
-							TeleportService:Teleport(game.PlaceId, player, {[PARAMETER_2_NAME] = true})
-						end)
-						if ok then
-							success = true
-							teleported[player] = true
-							Logs:AddLog("Script", "Teleported " .. player.Name .. " back to the main game.")
-						else
-							Logs:AddLog("Errors", "Teleport error for " .. player.Name .. ": " .. tostring(err) .. " (try " .. tries .. "/" .. MAX_RETRIES .. ")")
-							task.wait(RETRY_WAIT * tries)
-						end
-					until success or tries >= MAX_RETRIES
-					if not success then
-						Functions.Notification("Teleport failed", "Could not teleport " .. player.Name .. ". Please rejoin manually.", {player}, 30, "MatIcon://Error")
-						Logs:AddLog("Errors", "Final teleport failure for " .. player.Name)
-					end
+					Remote.RemoveGui(player, "Message")
+					Remote.MakeGui(player, "Message", {
+						Title = "Server Restart";
+						Message = "Teleporting back to main server..";
+						Scroll = false;
+						Time = 1000
+					})
+
+					task.wait(waitTime + 5)
+					waitTime /= 2
+
+					Logs:AddLog("Script", `Teleporting {player.Name} back to the main game`)
+					teleportedPlayers[player] = 1
+					table.insert(playersToTeleport, player)
 				end
 			end
 
@@ -86,9 +75,17 @@ return function(Vargs, GetEnv)
 				service.Players.PlayerAdded:Wait()
 			end
 
-			local playerAddedConn
-			playerAddedConn = service.Players.PlayerAdded:Connect(function(player)
-				teleportWithRetry(player)
+			service.Players.PlayerAdded:Connect(function(player)
+				local joindata = player:GetJoinData()
+				local data = type(joindata) == "table" and joindata.TeleportData
+
+				if type(data) == "table" and data[PARAMETER_NAME] then
+					if TeleportTask.Running or TeleportTask.R_Status == "Idle" then
+						TeleportTask.Finished:wait()
+					end
+
+					TeleportService:TeleportToPlaceInstance(game.PlaceId, jobid, player, "", {[PARAMETER_2_NAME] = true})
+				end
 			end)
 
 			for _, player in service.Players:GetPlayers() do
@@ -120,11 +117,11 @@ return function(Vargs, GetEnv)
 		Arguments = 0;
 		Description = "Restart the server, placing all of the players in a reserved server and teleporting each of them to the new server";
 		Function = function(p,args,data)
-			if service.RunService:IsStudio() then return end
+			if service.RunService:IsStudio() and not server.Core.DebugMode then return end
 			if #Players:GetPlayers() == 0 then return end
 
 			local newserver = TeleportService:ReserveServer(game.PlaceId)
-			Functions.Message("Adonis", "Server Restart", "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
+			Functions.Message("Adonis", Settings.SystemTitle, "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
 			
 			task.wait(2)
 
@@ -180,24 +177,12 @@ return function(Vargs, GetEnv)
 			Variables.ServerLock = true
 
 			local newserver = TeleportService:ReserveServer(game.PlaceId)
-			Functions.Message("Adonis", "Server Restart", "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
+			Functions.Message("Adonis", Settings.SystemTitle, "The server is restarting, please wait...", 'MatIcon://Hourglass empty', service.GetPlayers(), false, 1000)
+			
+			task.wait(1)
 
-			-- Helper to teleport a player with retries and error handling
-			local function teleportPlayer(player)
-				local success, err = pcall(function()
-					teleportedPlayers[player] = 1
-					TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, { player }, "", {[PARAMETER_NAME] = true})
-				end)
-				if not success then
-					Logs:AddLog("Errors", `Teleport error for {player.Name}: {err}`)
-					Functions.Notification("Teleport failed", `Could not teleport {player.Name}. Please rejoin manually.`, {player}, 30, "MatIcon://Error")
-				end
-			end
-
-			-- Teleport all current players
-			local currentPlayers = Players:GetPlayers()
-			for _, v in currentPlayers do
-				teleportPlayer(v)
+			for _, v in Players:GetPlayers() do
+				teleportedPlayers[v] = 1
 			end
 
 			Logs:AddLog("Script", `Teleporting {#currentPlayers} players to a temporary softshutdown server`)

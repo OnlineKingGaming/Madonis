@@ -155,7 +155,7 @@ return function(Vargs, env)
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local sendLevel = data.PlayerData.Level
-				for _, v in service.GetPlayers(plr, args[1]) do
+				for _, v in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
 					local targLevel = Admin.GetLevel(v)
 					if sendLevel > targLevel then
 						Admin.AddAdmin(v, "Team Member")
@@ -177,7 +177,7 @@ return function(Vargs, env)
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local sendLevel = data.PlayerData.Level
-				for _, v in service.GetPlayers(plr, args[1]) do
+				for _, v in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
 					local targLevel = Admin.GetLevel(v)
 					if sendLevel > targLevel then
 						Admin.AddAdmin(v, "Team Member", true)
@@ -200,7 +200,7 @@ return function(Vargs, env)
 			Function = function(plr: Player, args: {string})
 				assert(args[1], "Missing target player (argument #1)")
 				assert(args[2], "Missing command string (argument #2)")
-				for _, v in service.GetPlayers(plr, args[1], {NoFakePlayer = true}) do
+				for _, v in service.GetPlayers(plr, args[1]) do
 					task.defer(Process.Command, v, args[2], {isSystem = true})
 				end
 			end
@@ -379,10 +379,9 @@ return function(Vargs, env)
 					Functions.Hint("Operation cancelled", {plr})
 				end
 			end,
-		}
+		};
 
-		--[[
-		TaskManager = { --// Unfinished
+		TaskManager = server.Data and server.Data.NightlyMode and { --// Unfinished
 			Prefix = Settings.Prefix;
 			Commands = {"taskmgr", "taskmanager"};
 			Args = {};
@@ -392,7 +391,6 @@ return function(Vargs, env)
 			Function = function(plr: Player, args: {string})
 				Remote.MakeGui(plr, "TaskManager", {})
 			end
-		};
-		--]]
+		} or nil;
 	}
 end
