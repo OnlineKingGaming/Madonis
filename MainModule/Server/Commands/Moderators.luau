@@ -6130,7 +6130,7 @@ return function(Vargs, env)
 				end
                 scr:Destroy()
 
-				Functions.Hint("You are now flying - press E to toggle flight", service.GetPlayers(plr, args[1], {DontError = true}), 10)
+				Functions.Notification("Flight", "You are now flying - press E to toggle flight", service.GetPlayers(plr, args[1], {DontError = true}))
 			end
 		};
 
