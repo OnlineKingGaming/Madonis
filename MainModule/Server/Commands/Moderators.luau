@@ -2901,25 +2901,36 @@ return function(Vargs, env)
 		};
 
 		UnTrack = {
-			Prefix = Settings.Prefix;
-			Commands = {"untrack", "untrace", "unfind", "unlocate", "notrack"};
-			Args = {"player"};
-			Description = "Stops tracking the target player(s)";
-			AdminLevel = "Moderators";
-			Function = function(plr: Player, args: {string})
-				if not args[1] or args[1]:lower() == `{Settings.SpecialPrefix}all` then
-					Variables.TrackingTable[plr.Name] = nil
-					Remote.RemoveLocal(plr, "Tracker", false, true)
-				else
-					local trackTargets = Variables.TrackingTable[plr.Name]
-					for _, v in service.GetPlayers(plr, args[1]) do
-						Remote.RemoveLocal(plr, `{v.Name}_Tracker`)
-						if trackTargets then
-							trackTargets[v] = nil
-						end
-					end
-				end
-			end
+		    Prefix = Settings.Prefix;
+		    Commands = {"untrack", "untrace", "unfind", "unlocate", "notrack"};
+		    Args = {"player"};
+		    Description = "Stops tracking the target player(s)";
+		    AdminLevel = "Moderators";
+		    Function = function(plr: Player, args: {string})
+		        local trackData = Variables.TrackingTable[plr.Name]
+			
+		        if not args[1] or args[1]:lower() == `{Settings.SpecialPrefix}all` then
+		            -- Disconnect all stored connections
+		            if trackData and trackData._connections then
+		                for _, conn in ipairs(trackData._connections) do
+		                    conn:Disconnect()
+		                end
+		            end
+				
+		            -- Clear tracking table
+		            Variables.TrackingTable[plr.Name] = nil
+				
+		            -- Remove all trackers
+		            Remote.RemoveLocal(plr, "Tracker", false, true)
+		        else
+		            if trackData then
+		                for _, v in service.GetPlayers(plr, args[1]) do
+		                    Remote.RemoveLocal(plr, `{v.Name}_Tracker`)
+		                    trackData[v] = nil
+		                end
+		            end
+		        end
+		    end
 		};
 
 		Phase = {

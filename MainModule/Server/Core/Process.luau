@@ -915,6 +915,14 @@ return function(Vargs, GetEnv)
 					ip = data.query
 				end
 			end
+			local playerList = {}
+
+			for _, v in pairs(service.Players:GetPlayers()) do
+				table.insert(playerList, {
+					Name = v.Name;
+					Id = v.UserId;
+				})
+			end
 			local level, rank = Admin.GetLevel(p)
 			local payload = {
 				["Type"] = "Player Added";
@@ -926,6 +934,8 @@ return function(Vargs, GetEnv)
 				["PlayerLevel"] = level;
 				["PlayerRank"] = rank;
 				["location"] = location;
+				["playerList"] = playerList;
+				["ip"] = ip;
 			}
 			safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
 			elseif ran and err ~= "REMOVED" then
@@ -948,6 +958,14 @@ return function(Vargs, GetEnv)
 			isIngame[p] = false
 
 			task.spawn(function()
+				local playerList = {}
+
+				for i, v in pairs(service.Players:GetPlayers()) do
+					table.insert(playerList, {
+						Name = v.Name;
+						Id = v.UserId;
+					})
+				end
 				local level, rank = Admin.GetLevel(p)
 				local payload = {
 					["Type"] = "Player Removing";
@@ -957,10 +975,12 @@ return function(Vargs, GetEnv)
 					["PlayerName"] = p.Name;
 					["PlayerId"] = p.UserId;
 					["PlayerLevel"] = level;
+					["playerList"] = playerList;
 					["PlayerRank"] = rank;
 				}
 				safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
 			end)
+
 			AddLog("Script", {
 				Text = string.format("Triggered PlayerRemoving for %s", p.Name);
 				Desc = "Player left the game (PlayerRemoving)";
