@@ -185,7 +185,13 @@ return function(Vargs, GetEnv)
 				teleportedPlayers[v] = 1
 			end
 
-			Logs:AddLog("Script", `Teleporting {#currentPlayers} players to a temporary softshutdown server`)
+			local function teleportPlayer(player)
+				teleportedPlayers[player] = 1
+				TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, { player }, "", {[PARAMETER_NAME] = true})
+			end
+
+			Logs:AddLog("Script", `Teleporting {#Players:GetPlayers()} players to a temporary softshutdown server`)
+			TeleportService:TeleportToPrivateServer(game.PlaceId, newserver, Players:GetPlayers(), "", {[PARAMETER_NAME] = true})
 
 			-- Listen for new players and teleport them
 			local playerAddedConn

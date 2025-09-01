@@ -489,14 +489,13 @@ return function(Vargs, GetEnv)
 				"lifealert", 
 				"sos"
 			}
-
-			if not game:GetService('RunService'):IsStudio() then 
+			--if not game:GetService('RunService'):IsStudio() then 
 				if not server.Variables.shiftPlayers[p.UserId] and not table.find(allowedCommands, cmols) and not string.match(msg, "^"..Settings.PlayerPrefix) and Admin.CheckAdmin(p) then
 					Functions.Notification("Warning", "You have not started your Shift. Use ;shift", {p}, 5)
 					warn(string.format("%s is not on duty, but tried to run a command %s", p.Name, cmols))
 					return
 				end
-			end
+			--end
 
 			if #msg > Process.MsgStringLimit and type(p) == "userdata" and p:IsA("Player") and not Admin.CheckAdmin(p) then
 				msg = string.sub(msg, 1, Process.MsgStringLimit)
@@ -669,6 +668,23 @@ return function(Vargs, GetEnv)
 		end;
 
 		Chat = function(p, msg)
+			local function HasPrefix(msg)
+    			local trimmedMsg = msg:match("^%s*(.*)") -- remove leading spaces
+
+    			-- Check player prefix first
+    			if trimmedMsg:sub(1, #Settings.PlayerPrefix) == Settings.PlayerPrefix then
+    			    return true, Settings.PlayerPrefix
+    			end
+			
+    			-- Check general prefixes (table)
+    			for _, prefix in ipairs(Settings.Prefix) do
+    			    if trimmedMsg:sub(1, #prefix) == prefix then
+    			        return true, prefix
+    			    end
+    			end
+			
+    			return false, nil
+			end
 			local didPassRate, didThrottle, canThrottle, curRate, maxRate = RateLimit(p, "Chat")
 			if didPassRate then
 				local isMuted = Admin.IsMuted(p);
@@ -677,16 +693,17 @@ return function(Vargs, GetEnv)
 				elseif not isMuted then
 					if not Admin.CheckSlowMode(p) then
 						msg = service.TextChatService.ChatVersion == Enum.ChatVersion.TextChatService and service.UnsanitizeXML(msg) or msg -- Hack to fix TextChatService invalidly XML escaping messages
+						local hasPrefix = HasPrefix(msg)
 						local msg = string.sub(msg, 1, Process.MsgStringLimit)
 						local filtered = service.LaxFilter(msg, p)
-
+						
 						AddLog(Logs.Chats, {
 							Text = `{p.Name}: {filtered}`;
 							Desc = tostring(filtered);
 							Player = p;
 						})
 
-						if Settings.ChatCommands then
+						if Settings.ChatCommands and hasPrefix then
 							if Admin.DoHideChatCmd(p, msg) then
 								Remote.Send(p,"Function","ChatMessage",`> {msg}`,Color3.new(1, 1, 1))
 								Process.Command(p, msg, {Chat = true;})
