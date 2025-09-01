@@ -58,7 +58,7 @@ return function(Vargs, GetEnv)
 									return true
 								elseif Settings.ChatCommands and Admin.DoHideChatCmd(SenderPlayer, chatMessage.Text) then -- // Hide chat commands?
 									if IsOriginalSender then
-										Remote.Send(SenderPlayer, "Function", "DisplaySystemMessageInTextChat", nil, "You ran a command hidden from others!")
+										Functions.Notification("Command Hidden", "The command you executed was hidden from others!", {SenderPlayer}, 5)
 									end
 
 									return false
@@ -381,7 +381,48 @@ return function(Vargs, GetEnv)
 		end,
 
 		DoHideChatCmd = function(p: Player, message: string, data: {[string]: any}?)
-			return true;
+			local function removePrefix(cmd)
+				local prefixes = {}
+				if type(Settings.Prefix) == "table" then
+					for _, prefix in ipairs(Settings.Prefix) do
+						table.insert(prefixes, prefix)
+					end
+				else
+					table.insert(prefixes, Settings.Prefix)
+				end
+				if Settings.PlayerPrefix then
+					table.insert(prefixes, Settings.PlayerPrefix)
+				end
+				for _, prefix in ipairs(prefixes) do
+					if cmd:sub(1, #prefix) == prefix then
+						return cmd:sub(#prefix + 1), true
+					end
+				end
+				return cmd, false
+			end
+
+			if type(message) ~= "string" or not Settings.ChatCommands then
+				return false
+			end
+
+			local commandStr, hadPrefix = removePrefix(message)
+
+			if not hadPrefix then
+				return false
+			end
+
+			-- Check if the message matches any command name (case-insensitive, must match start of string)
+			for _, cmdData in server.Commands do
+				if type(cmdData) == "table" then
+					for _, cmdName in cmdData.Commands do
+						if string.lower(commandStr):sub(1, #cmdName) == string.lower(cmdName) then
+							return true
+						end
+					end
+				end
+			end
+
+			return false
 		end;
 
 		GetPlayerGroups = function(p: Player)
