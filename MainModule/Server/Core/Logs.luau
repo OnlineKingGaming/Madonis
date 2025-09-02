@@ -45,6 +45,7 @@ return function(Vargs, GetEnv)
 		Exploit = if UseDLL then DLL.new() else {};
 		Errors = if UseDLL then DLL.new() else {};
 		DateTime = if UseDLL then DLL.new() else {};
+		Kills = if UseDLL then DLL.new() else {};
 		MaxLogs = 1000;
 		TempUpdaters = {};
 		IndToName = {
@@ -56,6 +57,7 @@ return function(Vargs, GetEnv)
 			Commands = "Command";
 			Exploit = "Exploit";
 			Errors = "Error";
+			Kills = "Kills";
 			DateTime = "DateTime";
 		};
 		OldCommandLogsLimit = 1000; --// Maximum number of command logs to save to the datastore (the higher the number, the longer the server will take to close)
@@ -214,6 +216,17 @@ return function(Vargs, GetEnv)
 				if updater then
 					return updater(data)
 				end
+			end;
+
+			KillLogs = function(plr)
+				local tab = {}
+				for i, v in ipairs(Logs.Kills:GetAsTable()) do
+					table.insert(tab, {
+						Text = v.Text;
+						Desc = v.Desc;
+					})
+				end
+				return tab
 			end;
 		};
 	};

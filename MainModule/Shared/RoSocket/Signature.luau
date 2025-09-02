@@ -7,6 +7,6 @@
 ]]--
 
 return {
-	Signature = "[RoSocket]",
+	Signature = "[MADONIS | WEBSOCKET]",
 	Splitter = "::"
 }

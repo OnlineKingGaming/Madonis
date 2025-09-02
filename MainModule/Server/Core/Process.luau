@@ -1189,9 +1189,6 @@ return function(Vargs, GetEnv)
 							end
 						end
 					end)
-					sock.OnErrorReceived:Connect(function(err: string?)
-						error(`Error from {sock.Socket}: {tostring(err)}`)
-					end)
 				end
 
 				hookSocketEvents(Socket)
@@ -1433,6 +1430,31 @@ return function(Vargs, GetEnv)
 
 				local Hum = char:FindFirstChildOfClass("Humanoid")
 				if not Hum then return end
+
+				Hum.Died:Connect(function()
+					local creator = Hum:FindFirstChild("creator")
+					local killer = creator and creator.Value
+
+					if killer and killer:IsA("Player") and killer ~= p then
+						local weapon = "Unknown"
+						if creator:IsA("ObjectValue") and creator.Name ~= "creator" then
+							weapon = creator.Name
+						elseif creator.Parent and creator.Parent:IsA("Tool") then
+							weapon = creator.Parent.Name
+						end
+						
+						Logs.AddLog("Kills", {
+							Text = string.format("%s killed %s", killer.Name, p.Name),
+							Desc = string.format("%s killed %s at %s", killer.Name, p.Name, os.date("%Y-%m-%d %H:%M:%S", os.time())),
+						})
+					elseif not killer then
+						Logs.AddLog("Kills", {
+							Text = string.format("%s died.", p.Name),
+							Desc = string.format("%s died at %s", p.Name, os.date("%Y-%m-%d %H:%M:%S", os.time())),
+						})
+					end
+				end)
+
 				local Health = Variables.Starter.Health[tostring(p.UserId)]
 				if Health then
 					Hum.MaxHealth = Health

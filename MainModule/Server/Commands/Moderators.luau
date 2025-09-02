@@ -6712,6 +6712,25 @@ return function(Vargs, env)
 			end
 		};
 
+		KillLogs = {
+			Prefix = Settings.Prefix;
+			Commands = {"killlogs", "kills", "killhistory"};
+			Args = {"autoupdate? (default: true)"};
+			Description = "Displays the current kill logs for the server";
+			AdminLevel = "Moderators";
+			ListUpdater = "Kills";
+			Function = function(plr: Player, args: {string})
+				Remote.MakeGui(plr, "List", {
+					Title = "Kill Logs";
+					Tab = Logs.ListUpdaters.KillLogs(plr);
+					Dots = true;
+					Update = "KillLogs";
+					TextSelectable = true;
+					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 1 else nil;
+				})
+			end
+		};
+
 		LeaveLogs = {
 			Prefix = Settings.Prefix;
 			Commands = {"leavelogs", "leaves", "leavehistory"};

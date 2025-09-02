@@ -127,6 +127,7 @@ return function(data, env)
 	end
 
 	function genList(Tab)
+		if not Tab then return end
 		local gotList = Tab
 
 		if not genDebounce then
@@ -138,7 +139,7 @@ return function(data, env)
 			else
 				PageCounter = PageNumber
 				search.Text = ""
-				search.PlaceholderText = "Search (" .. (#Tab == 1 and "1 Item" or #Tab .. " Items") .. ")";
+				search.PlaceholderText = `Search ({#Tab} {(#Tab == 1 and "Item" or "Items")})`
 				gotList = getListTab(Tab)
 			end
 
