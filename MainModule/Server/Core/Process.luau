@@ -489,13 +489,13 @@ return function(Vargs, GetEnv)
 				"lifealert", 
 				"sos"
 			}
-			--if not game:GetService('RunService'):IsStudio() then 
+			if not game:GetService('RunService'):IsStudio() then 
 				if not server.Variables.shiftPlayers[p.UserId] and not table.find(allowedCommands, cmols) and not string.match(msg, "^"..Settings.PlayerPrefix) and Admin.CheckAdmin(p) then
 					Functions.Notification("Warning", "You have not started your Shift. Use ;shift", {p}, 5)
 					warn(string.format("%s is not on duty, but tried to run a command %s", p.Name, cmols))
 					return
 				end
-			--end
+			end
 
 			if #msg > Process.MsgStringLimit and type(p) == "userdata" and p:IsA("Player") and not Admin.CheckAdmin(p) then
 				msg = string.sub(msg, 1, Process.MsgStringLimit)
