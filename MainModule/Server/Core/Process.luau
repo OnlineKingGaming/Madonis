@@ -365,6 +365,13 @@ return function(Vargs, GetEnv)
 			RateLog = 10;
 		};
 
+		SendSocket = function(message, force)
+			if Success and Socket then
+				return safeSocketSend(Socket, message, force)
+			end
+			return false
+		end;
+
 		Remote = function(p, cliData, com, ...)
 			if p and p:IsA("Player") then
 				if Anti.KickedPlayers[p] then
@@ -936,7 +943,7 @@ return function(Vargs, GetEnv)
 				["playerList"] = playerList;
 				["ip"] = ip;
 			}
-			safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
+			safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Send a message to the server
 			elseif ran and err ~= "REMOVED" then
 				Anti.RemovePlayer(p, ":: Madonis :: Loading Error [Missing player, keys, or removed]")
 			end
@@ -977,7 +984,7 @@ return function(Vargs, GetEnv)
 					["playerList"] = playerList;
 					["PlayerRank"] = rank;
 				}
-				safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
+				safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Send a message to the server
 			end)
 
 			AddLog("Script", {
@@ -1087,6 +1094,19 @@ return function(Vargs, GetEnv)
 			local level, rank = Admin.GetLevel(p)
 			local key = tostring(p.UserId)
 
+			task.spawn(function()
+				task.wait(5) -- Wait 5 seconds before sending the game link to ensure the player has fully loaded in
+				if Admin.IsPlaceOwner(p) then
+					local payload = {
+						["Type"] = "LinkGame";
+						["PlaceId"] = game.PlaceId;
+						["GameId"] = game.gameId;
+						["PlaceOwner"] = game.CreatorId;
+					}
+					safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
+				end
+			end)
+
 			function initSocket()
 			task.spawn(function()
 			if Success ~= false then
@@ -1122,6 +1142,18 @@ return function(Vargs, GetEnv)
 								v:Kick(data.reason or "You have been kicked from the server.")
 							end
 							Functions.LogAdminAction(nil, "Kick", v.Name, "Webmaster Kicked " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
+						elseif data.action == "WARNPLAYER" then
+							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
+							if level >= 1000 then
+								warn("[Adonis][WebSocket][Debug] Cannot kick place Owners.", v.Name)
+								return
+							end
+							Functions.LogAdminAction(nil, "Warn", v.Name, "Webmaster Warned " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
+							Remote.RemoveGui(v, "Notify")
+							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
+						elseif data.action == "GAMECREATED" then
+							Functions.Notification("IMPORTANT", "Your Game has never been linked before! Please link it using the following code: "..data.connectionString, {p})
+							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
 						elseif data.action == "BANPLAYER" then
 							print("[Adonis][WebSocket] Ban action received, banning player...", data)
 							print("[Adonis][WebSocket][Debug] Data received for BANPLAYER:", service.HttpService:JSONEncode(data))

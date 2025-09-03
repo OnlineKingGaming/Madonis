@@ -14,7 +14,8 @@ return function(Vargs, env)
 			Args = {"player", "number<s/m/h/d>", "reason"};
 			Description = `Bans the target player(s) from the game for the supplied amount of time; data-persistent; undo using {Settings.Prefix}untimeban`;
 			Filter = true;
-			AdminLevel = "Moderators";
+			Hidden = true;
+			AdminLevel = "Leadership";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {})
 				assert(args[1], "Missing target user (argument #1)")
@@ -49,7 +50,7 @@ return function(Vargs, env)
 			Args = {"username(s)", "number<s/m/h/d>", "reason"};
 			Description = `Bans the target user(s) from the game for the supplied amount of time; data-persistent; undo using {Settings.Prefix}untimeban`;
 			Filter = true;
-			AdminLevel = "Team Member";
+			AdminLevel = "Leadership";
 			Hidden = true;
 			Function = function(plr: Player, args: {string}, data: {})
 				assert(args[1], "Missing target user (argument #1)")
@@ -92,8 +93,9 @@ return function(Vargs, env)
 			Commands = {"untimeban", "untimedban", "untban", "untempban", "untemporaryban"};
 			Args = {"user"};
 			Description = "Removes the target user(s) from the timebans list";
-			AdminLevel = "Team Member";
+			AdminLevel = "Leadership";
 			Dangerous = true;
+			Hidden = true;
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, assert(args[1], "Missing target user (argument #1)"), {
 					UseFakePlayer = true;
@@ -116,9 +118,10 @@ return function(Vargs, env)
 			Commands = {"globalban", "permban", "permanentban", "pban", "gameban", "gban"};
 			Args = {"player/user", "reason"};
 			Description = "Bans the target player(s) from the game permanently; if they join a different server they will be banned there too";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
 			Dangerous = true;
 			Filter = true;
+			Hidden = true;
 			Function = function(plr: Player, args: {string}, data: {})
 				local reason = args[2] or "No reason provided"
 
@@ -143,8 +146,9 @@ return function(Vargs, env)
 			Commands = {"unglobalban", "unpermban", "unpermanentban", "unpban", "ungameban", "ungban"};
 			Args = {"user"};
 			Description = "Unbans the target user(s) from the game; saves";
-			AdminLevel = "Team Member";
+			AdminLevel = "Leadership";
 			Dangerous = true;
+			Hidden = true;
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, assert(args[1], "Missing target user (argument #1)"), {
 					UseFakePlayer = true;
@@ -167,7 +171,7 @@ return function(Vargs, env)
 			Commands = {"tempadmin", "tadmin"};
 			Args = {"player"};
 			Description = "Makes the target player(s) a temporary admin; does not save";
-			AdminLevel = "Team Member";
+			AdminLevel = "Leadership";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: any)
 				local senderLevel = data.PlayerData.Level
@@ -190,7 +194,7 @@ return function(Vargs, env)
 			Commands = {"permadmin", "padmin", "admin"};
 			Args = {"player/user"};
 			Description = "Makes the target player(s) an admin; saves";
-			AdminLevel = "Team Member";
+			AdminLevel = "Leadership";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: any)
 				local senderLevel = data.PlayerData.Level
@@ -427,7 +431,7 @@ return function(Vargs, env)
 			Commands = {"incognito"};
 			Args = {"player", "hideFromNonAdmins(default true)", "hideCharacter(default true)"};
 			Description = "Removes the target player from other clients' perspectives (persists until rejoin). Allows to set whether to hide only from nonadmins or from everyone.";
-			AdminLevel = "Team Member";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				local hidefromEveryone = false
 				local hideCharacter = true

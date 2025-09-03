@@ -206,6 +206,29 @@ return function(Vargs, env)
 			end
 		};
 
+		CheckLink = {
+			Prefix = Settings.PlayerPrefix;
+			Commands = {"checklink"};
+			Args = {};
+			Description = "Checks if the target player(s) have linked their game";
+			AdminLevel = "Creators";
+			CrossServerDenied = true;
+			Function = function(plr: Player, args: {string})
+				task.spawn(function()
+					if Admin.IsPlaceOwner(plr) then
+						local payload = {
+							["Type"] = "LinkGame";
+							["PlaceId"] = game.PlaceId;
+							["GameId"] = game.gameId;
+						["PlaceOwner"] = game.CreatorId;
+					}
+					Process.SendSocket(service.HttpService:JSONEncode(payload)) -- Send a message to the server
+				end
+			end)
+
+			end
+		};
+
 		GiveCash = {
 			Prefix = Settings.Prefix;
 			Commands = {"givecash"};

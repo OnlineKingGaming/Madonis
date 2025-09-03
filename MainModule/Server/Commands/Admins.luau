@@ -1361,7 +1361,8 @@ return function(Vargs, env)
 			Commands = {"serverban", "ban"};
 			Args = {"player/user", "reason"};
 			Description = "Bans the target player(s) from the server";
-			AdminLevel = "Admins";
+			AdminLevel = "Leadership";
+			Hidden = true;
 			Filter = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local reason = args[2] or "No reason provided"
@@ -1405,7 +1406,8 @@ return function(Vargs, env)
 			Commands = {"banmenu"};
 			Args = {};
 			Description = "Opens the ban menu";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
+			Hidden = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				Remote.MakeGui(plr,"BanMenu",{
 					AdminLevel = Admin.GetLevel(plr);

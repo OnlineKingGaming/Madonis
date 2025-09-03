@@ -581,7 +581,7 @@ return function(Vargs, GetEnv)
 				if filterName == "group" then
 					local groupId = tonumber((string.match(filterData, "^%d+")))
 					if groupId then
-						local plrRank = Admin.GetGroupLevel(plr.UserId, groupId)
+						local plrRank = plr:GetRankInGroup(groupId)
 						local requiredRank,noRank = tonumber((string.match(filterData, "^%d+:(.+)$"))), string.match(filterData,"^%d+$")
 						if requiredRank then
 							if requiredRank < 0 then

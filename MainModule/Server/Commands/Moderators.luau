@@ -106,7 +106,8 @@ return function(Vargs, env)
 			Commands = {"timebanlist", "timebanned", "timebans"};
 			Args = {};
 			Description = "Shows you the list of time banned users";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
+			Hidden = true;
 			Function = function(plr: Player, args: {string})
 				local variables = Core.Variables
 				local timeBans = variables.TimeBans or {}
@@ -1930,7 +1931,8 @@ return function(Vargs, env)
 			Commands = {"banlist", "banned", "bans", "banland"};
 			Args = {};
 			Description = "Shows you the normal ban list";
-			AdminLevel = "Moderators";
+			AdminLevel = "Leadership";
+			Hidden = true;
 			ListUpdater = function(plr: Player)
 				local tab = table.create(#Settings.Banned + 2)
 				local count = 0
