@@ -1078,63 +1078,82 @@ return function(Vargs, GetEnv)
 		end,
 
 		DoBanCheck = function(name: string | number | Instance, check: string | {[string]: any})
-			print("[DoBanCheck] Called with:", name, check)
 			local id = type(name) == "number" and name
 
 			if type(name) == "userdata" and name:IsA("Player") then
 				id = name.UserId
 				name = name.Name
-				print("[DoBanCheck] name is Player instance. id:", id, "name:", name)
 			end
 
 			if type(check) == "table" then
-				print("[DoBanCheck] check is table:", check)
 				if type(name) == "string" and check.Name and string.lower(check.Name) == string.lower(name) then
-					print("[DoBanCheck] Name match:", check.Name, name)
 					return true
 				elseif id and check.UserId and check.UserId == id then
-					print("[DoBanCheck] UserId match:", check.UserId, id)
 					return true
 				end
 			elseif type(check) == "string" then
-				print("[DoBanCheck] check is string:", check)
 				local cName, cId = string.match(check, "(.*):(.*)")
 				if not cName and cId then cName = check end
 
 				if cName then
-					if string.lower(cName) == string.lower(name) then
-						print("[DoBanCheck] cName match:", cName, name)
+					if string.lower(cName) == string.lower(tostring(name)) then
 						return true
 					elseif id and cId and id == tonumber(cId) then
-						print("[DoBanCheck] cId match:", cId, id)
 						return true
 					end
 				else
 					local match = string.lower(tostring(check)) == string.lower(tostring(name))
-					print("[DoBanCheck] fallback string match:", check, name, match)
 					return match
 				end
 			end
 
-			print("[DoBanCheck] No match found.")
 			return false
 		end;
 
-		RemoveBan = function(name, doSave)
-			print(name)
+		RemoveBan = function(nameOrId, doSave)
+			local id
 			local ret
-			local id = service.Players:GetUserIdFromNameAsync(tostring(name))
-			print(id)
-			local config: UnbanConfigType = {
-				UserIds = { id },
-				ApplyToUniverse = true,
-			}
-			local success, err = pcall(function()
-				return service.Players:UnbanAsync(config)
-			end)
-			print(success, err)
+			
+			-- Determine if input is a userId or a username
+			if type(nameOrId) == "number" then
+				id = nameOrId
+			elseif type(nameOrId) == "string" and tonumber(nameOrId) then
+				id = tonumber(nameOrId)
+			elseif type(nameOrId) == "userdata" and nameOrId:IsA("Player") then
+				id = nameOrId.UserId
+			else
+				-- Try to get UserId from username
+				local success, result = pcall(function()
+					return service.Players:GetUserIdFromNameAsync(tostring(nameOrId))
+				end)
+				
+				if success then
+					id = result
+				else
+					warn("Failed to get UserId from name:", nameOrId, result)
+					return false
+				end
+			end
+			
+			-- Attempt to unban from Roblox directly
+			if id then
+				local config = {
+					UserIds = { id },
+					ApplyToUniverse = true,
+				}
+				
+				local success, result = pcall(function()
+					return service.Players:UnbanAsync(config)
+				end)
+				
+				if not success then
+					warn("UnbanAsync failed:", result)
+				end
+			end
+			
+			-- Also remove from Adonis internal ban list
 			for i,v in Settings.Banned do
-				if Admin.DoBanCheck(name, v) then
+				if Admin.DoBanCheck(nameOrId, v) or (id and Admin.DoBanCheck(id, v)) then
 					ret = table.remove(Settings.Banned, i)
 					if doSave then
 						Core.DoSave({
@@ -1144,9 +1163,10 @@ return function(Vargs, GetEnv)
 							LaxCheck = true;
 						})
 					end
-					
+					break
 				end
 			end
+			
 			return ret
 		end;
 

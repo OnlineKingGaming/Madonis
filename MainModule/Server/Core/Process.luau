@@ -1142,14 +1142,86 @@ return function(Vargs, GetEnv)
 								v:Kick(data.reason or "You have been kicked from the server.")
 							end
 							Functions.LogAdminAction(nil, "Kick", v.Name, "Webmaster Kicked " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
+						elseif data.action == "UNBANPLAYER" then
+							local userId = tonumber(data.userId)
+							if not userId then
+								print("[Adonis][WebSocket] Invalid userId format for unban:", data.userId)
+								return
+							end
+							
+							local playerName = data.playerName or ("User " .. tostring(userId))
+							local unbanned = false
+							
+							print("[Adonis][WebSocket] Processing unban request for UserId:", userId, "Name:", playerName)
+							
+							-- Try to unban directly by userId first
+							local result = Admin.RemoveBan(userId, true)
+							if result then
+								Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Unbanned UserId " .. tostring(userId))
+								unbanned = true
+								print("[Adonis][WebSocket] Successfully unbanned UserId:", userId)
+								
+								-- Also attempt to remove any time bans
+								Admin.RemoveTimeBan(userId)
+								
+								-- Notify online admins
+								local adminPlrs = {}
+								for _, plr in ipairs(service.Players:GetPlayers()) do
+									if Admin.GetLevel(plr) > 0 then
+										table.insert(adminPlrs, plr)
+									end
+								end
+								Functions.Notification("Unban", "Webmaster unbanned " .. playerName, adminPlrs, 5, "MatIcon://Person")
+							else
+								-- Try to find player instance as fallback (if they're in game)
+								local v = service.Players:GetPlayerByUserId(userId)
+								if v then
+									result = Admin.RemoveBan(v, true)
+									if result then
+										Functions.LogAdminAction(nil, "Unban", v.Name, "Webmaster Unbanned " .. v.Name)
+										unbanned = true
+										Admin.RemoveTimeBan(v)
+										print("[Adonis][WebSocket] Successfully unbanned player:", v.Name)
+									else
+										print("[Adonis][WebSocket] Player is not banned in Adonis ban list:", v.Name, userId)
+									end
+								else
+									print("[Adonis][WebSocket] UserId was not found in ban list or not currently in game:", userId)
+								end
+								
+								-- Try to force unban through Roblox API as last resort
+								local config = {
+									UserIds = { userId },
+									ApplyToUniverse = true,
+								}
+								
+								local success, err = pcall(function()
+									return service.Players:UnbanAsync(config)
+								end)
+								
+								if success then
+									print("[Adonis][WebSocket] Successfully called Roblox UnbanAsync API for UserId:", userId)
+									unbanned = true
+									Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Force Unbanned UserId " .. tostring(userId))
+								else
+									print("[Adonis][WebSocket] Roblox UnbanAsync API failed:", err)
+								end
+							end
+							
+							-- Check if unban was successful
+							if unbanned then
+								print("[Adonis][WebSocket] Successfully processed unban for UserId:", userId)
+							else
+								print("[Adonis][WebSocket] Unban action failed for UserId:", userId, "- User likely not banned")
+							end
 						elseif data.action == "WARNPLAYER" then
 							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
 							if level >= 1000 then
 								warn("[Adonis][WebSocket][Debug] Cannot kick place Owners.", v.Name)
 								return
 							end
-							Functions.LogAdminAction(nil, "Warn", v.Name, "Webmaster Warned " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
-							Remote.RemoveGui(v, "Notify")
+							--Functions.LogAdminAction(nil, "Warn", v.Name, "Webmaster Warned " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
+							--Remote.RemoveGui(v, "Notify")
 							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
 						elseif data.action == "GAMECREATED" then
 							Functions.Notification("IMPORTANT", "Your Game has never been linked before! Please link it using the following code: "..data.connectionString, {p})

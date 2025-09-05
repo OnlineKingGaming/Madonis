@@ -1383,19 +1383,58 @@ return function(Vargs, env)
 		UnBan = {
 			Prefix = Settings.Prefix;
 			Commands = {"unserverban", "unban"};
-			Args = {"user"};
-			Description = "Unbans the target user(s) from the server";
+			Args = {"user/userId"};
+			Description = "Unbans the target user(s) from the server. Can accept usernames or UserIDs.";
 			AdminLevel = "Admins";
 			Function = function(plr: Player, args: {string})
-				for _, v in service.GetPlayers(plr, assert(args[1], "Missing user (argument #1)"), {
-					UseFakePlayer = true;
-					})
-				do
-					if Admin.RemoveBan(v) then
-						Functions.LogAdminAction(plr, "Unban", v.Name, "User has been unbanned.")
-						Functions.Hint(`{service.FormatPlayer(v, true)} has been unbanned`, {plr})
+				local input = assert(args[1], "Missing user/userId (argument #1)")
+				
+				-- Check if input is directly a UserID (number)
+				if tonumber(input) then
+					local userId = tonumber(input)
+					local result = Admin.RemoveBan(userId, true)
+					
+					if result then
+						-- Successfully removed from ban list
+						Functions.LogAdminAction(plr, "Unban", tostring(userId), "UserId has been unbanned.")
+						Functions.Hint(`UserId {userId} has been unbanned`, {plr})
+						
+						-- Also try to remove any time bans
+						Admin.RemoveTimeBan(userId)
 					else
-						Functions.Hint(`{service.FormatPlayer(v, true)} is not currently banned`, {plr})
+						-- Try direct Roblox unban as backup
+						local config = {
+							UserIds = { userId },
+							ApplyToUniverse = true,
+						}
+						
+						local success = pcall(function()
+							return service.Players:UnbanAsync(config)
+						end)
+						
+						if success then
+							Functions.LogAdminAction(plr, "Unban", tostring(userId), "UserId has been force-unbanned.")
+							Functions.Hint(`UserId {userId} has been force-unbanned`, {plr})
+						else
+							Functions.Hint(`UserId {userId} is not currently banned`, {plr})
+						end
+					end
+				else
+					-- Handle username(s) through GetPlayers
+					for _, v in service.GetPlayers(plr, input, {
+						UseFakePlayer = true;
+					})
+					do
+						local result = Admin.RemoveBan(v, true)
+						if result then
+							Functions.LogAdminAction(plr, "Unban", v.Name, "User has been unbanned.")
+							Functions.Hint(`{service.FormatPlayer(v, true)} has been unbanned`, {plr})
+							
+							-- Also try to remove any time bans
+							Admin.RemoveTimeBan(v)
+						else
+							Functions.Hint(`{service.FormatPlayer(v, true)} is not currently banned`, {plr})
+						end
 					end
 				end
 			end
