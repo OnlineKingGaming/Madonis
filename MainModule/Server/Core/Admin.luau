@@ -940,15 +940,27 @@ return function(Vargs, GetEnv)
 			local doCheck = Admin.DoCheck
 			local banCheck = Admin.DoBanCheck
 
+			-- Handle if p is a userId (number)
+			local userId = type(p) == "number" and p or (type(p) == "userdata" and p.UserId) or (type(p) == "table" and p.UserId)
+			local name = (type(p) == "userdata" and p.Name) or (type(p) == "table" and p.Name) or (type(p) == "string" and p)
+
 			for ind, admin in Settings.Banned do
-				if (type(admin) == "table" and ((admin.UserId and doCheck(p, admin.UserId, true)) or (admin.Name and not admin.UserId and doCheck(p, admin.Name, true)))) or doCheck(p, admin, true) then
+				if type(admin) == "table" then
+					if (admin.UserId and userId and admin.UserId == userId)
+						or (admin.Name and name and string.lower(admin.Name) == string.lower(name))
+						or ((admin.UserId or admin.Name) and doCheck(p, admin.UserId or admin.Name, true))
+					then
+						return true, admin.Reason
+					end
+				end
+				if doCheck(p, admin, true) then
 					return true, (type(admin) == "table" and admin.Reason)
 				end
 			end
 
 			for ind, ban in Core.Variables.TimeBans do
-				if p.UserId == ban.UserId then
-					if ban.EndTime-os.time() <= 0 then
+				if (userId and ban.UserId == userId) or (type(p) == "userdata" and p.UserId == ban.UserId) then
+					if ban.EndTime - os.time() <= 0 then
 						table.remove(Core.Variables.TimeBans, ind)
 					else
 						return true, `\n {ban.Reason or "(No reason provided.)"}\n | Banned until {service.FormatTime(ban.EndTime, {WithWrittenDate = true})}`
@@ -957,15 +969,26 @@ return function(Vargs, GetEnv)
 			end
 
 			for ind, admin in HTTP.Trello.Bans do
-				local name = type(admin) == "table" and admin.Name or admin
-				if doCheck(p, name) or banCheck(p, name) then
+				local banName = type(admin) == "table" and admin.Name or admin
+				local banUserId = type(admin) == "table" and admin.UserId or nil
+				if (banUserId and userId and banUserId == userId)
+					or (banName and name and string.lower(banName) == string.lower(name))
+					or doCheck(p, banName)
+					or banCheck(p, banName)
+				then
 					return true, (type(admin) == "table" and admin.Reason and service.Filter(admin.Reason, p, p))
 				end
 			end
 
 			if HTTP.WebPanel.Bans then
 				for ind, admin in HTTP.WebPanel.Bans do
-					if doCheck(p, admin) or banCheck(p, admin) then
+					local banName = type(admin) == "table" and admin.Name or admin
+					local banUserId = type(admin) == "table" and admin.UserId or nil
+					if (banUserId and userId and banUserId == userId)
+						or (banName and name and string.lower(banName) == string.lower(name))
+						or doCheck(p, admin)
+						or banCheck(p, admin)
+					then
 						return true, (type(admin) == "table" and admin.Reason)
 					end
 				end
@@ -974,21 +997,58 @@ return function(Vargs, GetEnv)
 
 		AddBan = function(p, reason, doSave, moderator, banType)
 			print(p, doSave)
-			if type(p) == "string" then
-				p = service.Players:FindFirstChild(p)
+			
+			-- Handle different input types for p (Player object, userId, username, or table with metadata)
+			local userId, username
+			
+			if type(p) == "number" then
+				-- If p is directly a userId number
+				userId = p
+				pcall(function()
+					username = service.Players:GetNameFromUserIdAsync(userId)
+				end)
+			elseif type(p) == "string" then
+				-- If p is a username string, try to find the player or get userId
+				local player = service.Players:FindFirstChild(p)
+				if player then
+					userId = player.UserId
+					username = player.Name
+					p = player
+				else
+					-- Try to get userId from username if player not in game
+					pcall(function()
+						userId = service.Players:GetUserIdFromNameAsync(p)
+						username = p
+					end)
+				end
+			elseif type(p) == "userdata" and p:IsA("Player") then
+				-- If p is a Player instance
+				userId = p.UserId
+				username = p.Name
+			elseif type(p) == "table" then
+				-- If p is a table with metadata
+				userId = p.UserId or (p.Name and service.Players:GetUserIdFromNameAsync(p.Name))
+				username = p.Name or (userId and service.Players:GetNameFromUserIdAsync(userId))
 			end
+			
+			-- Ensure we have valid data
+			if not userId then
+				warn("AddBan failed: Could not determine userId for:", p)
+				return
+			end
+			
 			local value = {
-				Name = p.Name or p;
-				UserId = p.UserId or service.Players:GetUserIdFromNameAsync(p);
+				Name = username or tostring(p);
+				UserId = userId;
 				Reason = reason;
 				Moderator = if moderator then service.FormatPlayer(moderator) else "%SYSTEM%";
 				BanType = banType
 			}
 
 			table.insert(Settings.Banned, value)
-			if string.lower(banType) == "global" then
-				local config: BanConfigType = {
-					UserIds = { p.UserId or service.Players:GetUserIdFromNameAsync(p) },
+			if string.lower(banType or "") == "global" then
+				local config = {
+					UserIds = { userId },
 					Duration = -1,
 					DisplayReason = reason,
 					PrivateReason = "This ban was made using Madonis. Moderator: " .. (moderator and service.FormatPlayer(moderator) or "%SYSTEM%"),
@@ -1006,7 +1066,10 @@ return function(Vargs, GetEnv)
 						Table = "Banned";
 						Value = value;
 					})
-					--Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
+					-- Don't attempt to remove player if we only have a userId
+					if username then
+						Core.CrossServer("RemovePlayer", username, Variables.BanMessage, value.Reason or "No reason provided")
+					end
 				end
 			else
 				if doSave then
@@ -1016,27 +1079,67 @@ return function(Vargs, GetEnv)
 						Value = value;
 					})
 
-					Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
+					if username then
+						Core.CrossServer("RemovePlayer", username, Variables.BanMessage, value.Reason or "No reason provided")
+					end
 				end
-
-			if type(p) ~= "table" then
-				if not service.Players:FindFirstChild(p.Name) then
-					Remote.Send(p,'Function','KillClient')
-				else
-					if p then pcall(function() p:Kick(`{Variables.BanMessage} | Reason: {value.Reason or "No reason provided"}`) end) end
+			
+				-- Handle kicking if the player is still in-game
+				local player = (type(p) == "userdata" and p:IsA("Player")) and p or service.Players:GetPlayerByUserId(userId)
+				if player and player.Parent == service.Players then
+					pcall(function() 
+						player:Kick(`{Variables.BanMessage} | Reason: {value.Reason or "No reason provided"}`)
+					end)
 				end
 			end
-			end
-				print(success, err)
-
-			service.Events.PlayerBanned:Fire(p, reason, doSave, moderator)
+			
+			-- Fire the banned event
+			service.Events.PlayerBanned:Fire({UserId = userId, Name = username or tostring(userId)}, reason, doSave, moderator)
 		end;
 
-		AddTimeBan = function(p : Player | {[string]: any}, duration: number, reason: string, moderator: Player?)
-			print(p)
+		AddTimeBan = function(p : Player | {[string]: any} | number | string, duration: number, reason: string, moderator: Player?)
+			-- Handle different input types for p (Player object, userId, username, or table with metadata)
+			local userId, username
+			
+			if type(p) == "number" then
+				-- If p is directly a userId number
+				userId = p
+				pcall(function()
+					username = service.Players:GetNameFromUserIdAsync(userId)
+				end)
+			elseif type(p) == "string" then
+				-- If p is a username string, try to find the player or get userId
+				local player = service.Players:FindFirstChild(p)
+				if player then
+					userId = player.UserId
+					username = player.Name
+					p = player
+				else
+					-- Try to get userId from username if player not in game
+					pcall(function()
+						userId = service.Players:GetUserIdFromNameAsync(p)
+						username = p
+					end)
+				end
+			elseif type(p) == "userdata" and p:IsA("Player") then
+				-- If p is a Player instance
+				userId = p.UserId
+				username = p.Name
+			elseif type(p) == "table" then
+				-- If p is a table with metadata
+				userId = p.UserId or (p.Name and service.Players:GetUserIdFromNameAsync(p.Name))
+				username = p.Name or (userId and service.Players:GetNameFromUserIdAsync(userId))
+			end
+			
+			-- Ensure we have valid data
+			if not userId then
+				warn("AddTimeBan failed: Could not determine userId for:", p)
+				return
+			end
+			
 			local value = {
-				Name = p.Name or p;
-				UserId = p.UserId or service.Players:GetUserIdFromNameAsync(p);
+				Name = username or tostring(userId);
+				UserId = userId;
 				EndTime = os.time() + tonumber(duration);
 				Reason = reason;
 				Moderator = if moderator then service.FormatPlayer(moderator) else "%SYSTEM%";
@@ -1050,20 +1153,18 @@ return function(Vargs, GetEnv)
 				Value = value;
 			})
 
-			--Core.CrossServer("RemovePlayer", p.Name, Variables.BanMessage, value.Reason or "No reason provided")
-
-			if type(p) ~= "table" then
-				if not service.Players:FindFirstChild(p.Name) then
-					--Remote.Send(p, "Function", "KillClient")
-				else
-					--if p then pcall(function() p:Kick(`{Variables.BanMessage} | Reason: {value.Reason or "No reason provided"}`) end) end
-				end
+			-- Handle kicking if the player is still in-game
+			local player = (type(p) == "userdata" and p:IsA("Player")) and p or service.Players:GetPlayerByUserId(userId)
+			if player and player.Parent == service.Players then
+				pcall(function() 
+					player:Kick(`{Variables.BanMessage} | Reason: {value.Reason or "No reason provided"}`)
+				end)
 			end
 
-			service.Events.PlayerBanned:Fire(p, reason, true, moderator)
+			service.Events.PlayerBanned:Fire({UserId = userId, Name = username or tostring(userId)}, reason, true, moderator)
 
-			local config: BanConfigType = {
-				UserIds = { p.UserId or service.Players:GetUserIdFromNameAsync(p) },
+			local config = {
+				UserIds = { userId },
 				Duration = tonumber(duration),
 				DisplayReason = reason,
 				PrivateReason = "This ban was made using Madonis. Moderator: " .. (moderator and service.FormatPlayer(moderator) or "%SYSTEM%"),
@@ -1071,10 +1172,9 @@ return function(Vargs, GetEnv)
 				ApplyToUniverse = true,
 			}
 
-				local success, err = pcall(function()
-					return service.Players:BanAsync(config)
-				end)
-				print(success, err)
+			pcall(function()
+				return service.Players:BanAsync(config)
+			end)
 		end,
 
 		DoBanCheck = function(name: string | number | Instance, check: string | {[string]: any})

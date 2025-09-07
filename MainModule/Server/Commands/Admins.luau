@@ -457,7 +457,7 @@ return function(Vargs, env)
 			Args = {"message"};
 			Filter = true;
 			Description = "Sets the ban message banned players see";
-			AdminLevel = "Admins";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				Variables.BanMessage = assert(args[1], "Missing message (argument #1)")
 			end
@@ -1385,7 +1385,7 @@ return function(Vargs, env)
 			Commands = {"unserverban", "unban"};
 			Args = {"user/userId"};
 			Description = "Unbans the target user(s) from the server. Can accept usernames or UserIDs.";
-			AdminLevel = "Admins";
+			AdminLevel = "Leadership";
 			Function = function(plr: Player, args: {string})
 				local input = assert(args[1], "Missing user/userId (argument #1)")
 				
@@ -1438,24 +1438,6 @@ return function(Vargs, env)
 					end
 				end
 			end
-		};
-
-		BanMenu = {
-			Prefix = Settings.Prefix;
-			Commands = {"banmenu"};
-			Args = {};
-			Description = "Opens the ban menu";
-			AdminLevel = "Leadership";
-			Hidden = true;
-			Function = function(plr: Player, args: {string}, data: {any})
-				Remote.MakeGui(plr,"BanMenu",{
-					AdminLevel = Admin.GetLevel(plr);
-					CanBan = Admin.CheckComLevel(Admin.GetLevel(plr),Commands.ServerBan.AdminLevel);
-					CanTimeBan = Admin.CheckComLevel(Admin.GetLevel(plr),Commands.TimeBan.AdminLevel);
-					CanPermBan = Admin.CheckComLevel(Admin.GetLevel(plr),Commands.PermanentBan.AdminLevel);
-					Prefix = Functions.GetMainPrefix()
-				})
-			end,
 		};
 
 		CustomMessage = {
