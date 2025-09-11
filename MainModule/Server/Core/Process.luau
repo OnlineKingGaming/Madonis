@@ -6,37 +6,15 @@ return function(Vargs, GetEnv)
 	local server = Vargs.Server
 	local service = Vargs.Service
 	local PlaceName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name
-	local API_BASE_URL = "https://madonis.globaldevelopment.xyz/v1"
-	local SERVER_ID = service.RunService:IsStudio() and "IN_STUDIO" or game.JobId
+	local RoSocket = require(server.Shared.RoSocket.RoSocket);
+	RoSocket.Startup()
+	task.wait(0.2)
+	local Success, Socket = pcall(RoSocket.Connect, "wss://madonis.globaldevelopment.xyz")
 	local isShuttingDown = false
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
 	local Functions, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Settings, Defaults
 	local logError = env.logError
 	local Routine = env.Routine
-
-	-- Helper to safely send to API with global throttle/cooldown
-	local rateLimitCooldown = 15 -- seconds to wait after rate-limit error
-
-	function sendToAPI(payload, force)
-		local success, response = pcall(function()
-			return service.HttpService:PostAsync(
-				API_BASE_URL .. "/send",
-				service.HttpService:JSONEncode(payload),
-				Enum.HttpContentType.ApplicationJson
-			)
-		end)
-		if not success then
-			local msg = tostring(response)
-			warn("API send failed: " .. msg)
-			if msg:find("exceeded limit") or msg:find("rate") then
-				apiCooldownUntil = now + rateLimitCooldown
-				warn("[Adonis] Entering API cooldown for " .. rateLimitCooldown .. "s due to rate-limit error.")
-			end
-			return false
-		end
-		return true
-	end
-
 	local function Init()
 		Functions = server.Functions;
 		Admin = server.Admin;
@@ -111,203 +89,6 @@ return function(Vargs, GetEnv)
 
 		if Settings.G_Access_Key ~= "Example_Key" and Settings.Allowed_API_Calls.Client then
 			Remote._globalAccessHash = Functions.SHA256(Settings.G_Access_Key..game.GameId)
-		end
-
-		-- Subscribe to Messaging Service for commands (only in live servers)
-		if not service.RunService:IsStudio() then
-			local MessagingService = game:GetService("MessagingService")
-			local subscribeSuccess, subscribeConnection = pcall(function()
-				return MessagingService:SubscribeAsync("AdonisCommands", function(message)
-					local data = message.Data
-					if data and data.serverId == SERVER_ID then
-						-- Handle received data like websocket
-						if data.action == "SHUTDOWN" then
-							print("[Adonis][Messaging] Shutdown action received, shutting down...")
-							for _, player in ipairs(game.Players:GetPlayers()) do
-								if player and player:IsA("Player") then
-									player:Kick(data.reason or "Server is shutting down.")
-								end
-							end
-							return
-						elseif data.action == "KICKPLAYER" then
-							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
-							if v then
-								local level, rank = Admin.GetLevel(v)
-								if level >= 1000 then
-									warn("[Adonis][Messaging][Debug] Cannot kick place Owners.", v.Name)
-									return
-								end
-								v:Kick(data.reason or "You have been kicked from the server.")
-								Functions.LogAdminAction(nil, "Kick", v.Name, "Webmaster Kicked " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
-							else
-								Remote.Send(v, "Function", "Kill")
-							end
-						elseif data.action == "UNBANPLAYER" then
-							local userId = tonumber(data.userId)
-							if not userId then
-								print("[Adonis][Messaging] Invalid userId format for unban:", data.userId)
-								return
-							end
-							
-							local playerName = data.playerName or ("User " .. tostring(userId))
-							local unbanned = false
-							
-							print("[Adonis][Messaging] Processing unban request for UserId:", userId, "Name:", playerName)
-							
-							-- Try to unban directly by userId first
-							local result = Admin.RemoveBan(userId, true)
-							if result then
-								Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Unbanned UserId " .. tostring(userId))
-								unbanned = true
-								print("[Adonis][Messaging] Successfully unbanned UserId:", userId)
-								
-								-- Also attempt to remove any time bans
-								Admin.RemoveTimeBan(userId)
-								
-								-- Notify online admins
-								local adminPlrs = {}
-								for _, plr in ipairs(service.Players:GetPlayers()) do
-									if Admin.GetLevel(plr) > 0 then
-										table.insert(adminPlrs, plr)
-									end
-								end
-								Functions.Notification("Unban", "Webmaster unbanned " .. playerName, adminPlrs, 5, "MatIcon://Person")
-							else
-								-- Try to find player instance as fallback (if they're in game)
-								local v = service.Players:GetPlayerByUserId(userId)
-								if v then
-									result = Admin.RemoveBan(v, true)
-									if result then
-										Functions.LogAdminAction(nil, "Unban", v.Name, "Webmaster Unbanned " .. v.Name)
-										unbanned = true
-										Admin.RemoveTimeBan(v)
-										print("[Adonis][Messaging] Successfully unbanned player:", v.Name)
-									else
-										print("[Adonis][Messaging] Player is not banned in Adonis ban list:", v.Name, userId)
-									end
-								else
-									print("[Adonis][Messaging] UserId was not found in ban list or not currently in game:", userId)
-								end
-								
-								-- Try to force unban through Roblox API as last resort
-								local config = {
-									UserIds = { userId },
-									ApplyToUniverse = true,
-								}
-								
-								local success, err = pcall(function()
-									return service.Players:UnbanAsync(config)
-								end)
-								
-								if success then
-									print("[Adonis][Messaging] Successfully called Roblox UnbanAsync API for UserId:", userId)
-									unbanned = true
-									Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Force Unbanned UserId " .. tostring(userId))
-								else
-									print("[Adonis][Messaging] Roblox UnbanAsync API failed:", err)
-								end
-							end
-							
-							-- Check if unban was successful
-							if unbanned then
-								print("[Adonis][Messaging] Successfully processed unban for UserId:", userId)
-							else
-								print("[Adonis][Messaging] Unban action failed for UserId:", userId, "- User likely not banned")
-							end
-						elseif data.action == "WARNPLAYER" then
-							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
-							if v then
-								local level, rank = Admin.GetLevel(v)
-								if level >= 1000 then
-									warn("[Adonis][Messaging][Debug] Cannot warn place Owners.", v.Name)
-									return
-								end
-								--Functions.LogAdminAction(nil, "Warn", v.Name, "Webmaster Warned " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
-								--Remote.RemoveGui(v, "Notify")
-								--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
-							end
-						elseif data.action == "GAMECREATED" then
-							-- Notify all players
-							for _, plr in ipairs(service.Players:GetPlayers()) do
-								if Admin.GetLevel(plr) > 900 then
-									return
-								end
-								Functions.Notification("IMPORTANT", "Your Game has never been linked before! Please link it using the following code: "..data.connectionString, {plr})
-							end
-						elseif data.action == "BANPLAYER" then
-							print("[Adonis][Messaging] Ban action received, banning player...", data)
-							print("[Adonis][Messaging][Debug] Data received for BANPLAYER:", service.HttpService:JSONEncode(data))
-							if string.lower(data.length) == "permanent" or string.lower(data.length) == "perm" then
-								local v
-								for _, player in ipairs(service.Players:GetPlayers()) do
-									print("[Adonis][Messaging][Debug] Checking player:", player.Name, player.UserId)
-									if tostring(player.UserId) == tostring(data.userId) then
-										v = player
-										break
-									end
-								end
-								if v then
-									local level, rank = Admin.GetLevel(v)
-									if level >= 1000 then
-										warn("[Adonis][Messaging][Debug] Cannot ban place Owners.", v.Name)
-										return
-									end
-									local alreadyBanned = Admin.CheckBan(v)
-									if not alreadyBanned then
-										local reason = data.reason or "No reason provided"
-										print("[Adonis][Messaging][Debug] Found player for permanent ban:", v.Name)
-										Admin.AddBan(v, reason, true, nil, "Global")
-										Functions.LogAdminAction(nil, "Permanent Ban", v.Name, "Webmaster Banned " .. v.Name .. " Permanently: " .. reason)
-										Functions.Hint(`Game-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
-									else
-										print("[Adonis][Messaging][Debug] Player already banned:", v.Name)
-									end
-								else
-									warn("[Adonis][Messaging][Debug] No player found with UserId:", data.userId)
-								end
-							else
-								local v
-								for _, player in ipairs(service.Players:GetPlayers()) do
-									print("[Adonis][Messaging][Debug] Checking player:", player.Name, player.UserId)
-									if tostring(player.UserId) == tostring(data.userId) then
-										v = player
-										break
-									end
-								end
-								if v then
-									local level, rank = Admin.GetLevel(v)
-									if level >= 1000 then
-										warn("[Adonis][Messaging][Debug] Cannot ban place Owners.", v.Name)
-										return
-									end
-									local alreadyBanned = Admin.CheckBan(v)
-									if not alreadyBanned then
-										local reason = data.reason or "No reason provided"
-										local duration = tonumber(data.length)
-										print("[Adonis][Messaging][Debug] Found player for time ban:", v.Name, "Duration:", duration)
-										if not duration or duration <= 0 then
-											warn("[Adonis][Messaging][Debug] Invalid duration for time ban:", data.length)
-											return
-										end
-										Admin.AddTimeBan(v, duration, reason)
-										Functions.LogAdminAction(nil, "Time Ban", v.Name, "Webmaster Banned " .. v.Name .. " for: " .. reason .. " (" .. duration .. " seconds)")
-										Functions.Hint(`Time-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
-									else
-										print("[Adonis][Messaging][Debug] Player already time-banned:", v.Name)
-									end
-								else
-									warn("[Adonis][Messaging][Debug] No player found with UserId:", data.userId)
-								end
-							end
-						end
-					end
-				end)
-			end)
-			if not subscribeSuccess then
-				warn("Failed to subscribe to Messaging Service: " .. tostring(subscribeConnection))
-			else
-				print("[Adonis][Messaging] Successfully subscribed to AdonisCommands topic")
-			end
 		end
 
 		Process.Init = nil
@@ -532,6 +313,43 @@ return function(Vargs, GetEnv)
 		end
 	end
 
+	-- Helper to safely send on the socket with global throttle/cooldown
+	local lastSocketSend = 0
+	local socketCooldownUntil = 0
+	local minSocketSendInterval = 1.5 -- seconds between sends
+	local rateLimitCooldown = 15 -- seconds to wait after rate-limit error
+
+	function safeSocketSend(socket, message, force)
+		local now = os.clock()
+		if not force then
+			if now < socketCooldownUntil then
+				warn("[Adonis] Socket send blocked: in cooldown due to previous rate-limit error. Cooldown ends in " .. string.format("%.1f", socketCooldownUntil - now) .. "s.")
+				return false
+			end
+			if now - lastSocketSend < minSocketSendInterval then
+				warn("[Adonis] Socket send throttled: minimum interval not met (" .. string.format("%.2f", minSocketSendInterval) .. "s)")
+				return false
+			end
+		end
+		if socket and socket.readyState == "OPEN" and socket.Send then
+			local ok, result = pcall(socket.Send, socket, message)
+			lastSocketSend = now
+			if not ok then
+				local msg = tostring(result)
+				warn("Socket.Send failed: " .. msg)
+				if msg:find("exceeded limit") or msg:find("rate") then
+					socketCooldownUntil = now + rateLimitCooldown
+					warn("[Adonis] Entering socket cooldown for " .. rateLimitCooldown .. "s due to rate-limit error.")
+				end
+				return false
+			end
+			return result
+		else
+			warn("Socket is not open or valid, skipping send.")
+			return false
+		end
+	end
+
 	server.Process = {
 		Init = Init;
 		RunAfterPlugins = RunAfterPlugins;
@@ -548,7 +366,10 @@ return function(Vargs, GetEnv)
 		};
 
 		SendSocket = function(message, force)
-			return sendToAPI(service.HttpService:JSONDecode(message), force)
+			if Success and Socket then
+				return safeSocketSend(Socket, message, force)
+			end
+			return false
 		end;
 
 		Remote = function(p, cliData, com, ...)
@@ -1122,7 +943,7 @@ return function(Vargs, GetEnv)
 				["playerList"] = playerList;
 				["ip"] = ip;
 			}
-			sendToAPI(payload, true) -- Send a message to the server
+			safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Send a message to the server
 			elseif ran and err ~= "REMOVED" then
 				Anti.RemovePlayer(p, ":: Madonis :: Loading Error [Missing player, keys, or removed]")
 			end
@@ -1163,7 +984,7 @@ return function(Vargs, GetEnv)
 					["playerList"] = playerList;
 					["PlayerRank"] = rank;
 				}
-				sendToAPI(payload, true) -- Send a message to the server
+				safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Send a message to the server
 			end)
 
 			AddLog("Script", {
@@ -1282,9 +1103,203 @@ return function(Vargs, GetEnv)
 						["GameId"] = game.gameId;
 						["PlaceOwner"] = game.CreatorId;
 					}
-					sendToAPI(payload) -- Send a message to the server
+					safeSocketSend(Socket, service.HttpService:JSONEncode(payload)) -- Send a message to the server
 				end
 			end)
+
+			function initSocket()
+			task.spawn(function()
+			if Success ~= false then
+				local function hookSocketEvents(sock)
+				sock.OnDisconnect:Connect(function(...: any?)
+						warn(`Socket {sock.Socket} was disconnected!`)
+					end)
+					sock.OnMessageReceived:Connect(function(msg: string?)
+						if msg == "Hello from the web server!" then
+							sock.Send("Hello Server")
+						end
+							-- Optionally buffer messages for debugging
+						local success, data = pcall(service.HttpService.JSONDecode, service.HttpService, msg)
+
+						if data.action == "SHUTDOWN" then
+							print("[Adonis][WebSocket] Shutdown action received, shutting down...")
+							for _, player in ipairs(game.Players:GetPlayers()) do
+								if player and player:IsA("Player") then
+									player:Kick(data.reason or "Server is shutting down.")
+								end
+							end
+							return
+						elseif data.action == "KICKPLAYER" then
+							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
+							if not service.Players:FindFirstChild(v.Name) then
+								Remote.Send(v, "Function", "Kill")
+							else
+								local level, rank = Admin.GetLevel(v)
+								if level >= 1000 then
+									warn("[Adonis][WebSocket][Debug] Cannot kick place Owners.", v.Name)
+									return
+								end
+								v:Kick(data.reason or "You have been kicked from the server.")
+							end
+							Functions.LogAdminAction(nil, "Kick", v.Name, "Webmaster Kicked " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
+						elseif data.action == "UNBANPLAYER" then
+							local userId = tonumber(data.userId)
+							if not userId then
+								print("[Adonis][WebSocket] Invalid userId format for unban:", data.userId)
+								return
+							end
+							
+							local playerName = data.playerName or ("User " .. tostring(userId))
+							local unbanned = false
+							
+							print("[Adonis][WebSocket] Processing unban request for UserId:", userId, "Name:", playerName)
+							
+							-- Try to unban directly by userId first
+							local result = Admin.RemoveBan(userId, true)
+							if result then
+								Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Unbanned UserId " .. tostring(userId))
+								unbanned = true
+								print("[Adonis][WebSocket] Successfully unbanned UserId:", userId)
+								
+								-- Also attempt to remove any time bans
+								Admin.RemoveTimeBan(userId)
+								
+								-- Notify online admins
+								local adminPlrs = {}
+								for _, plr in ipairs(service.Players:GetPlayers()) do
+									if Admin.GetLevel(plr) > 0 then
+										table.insert(adminPlrs, plr)
+									end
+								end
+							else
+								-- Try to find player instance as fallback (if they're in game)
+								local v = service.Players:GetPlayerByUserId(userId)
+								if v then
+									result = Admin.RemoveBan(v, true)
+									if result then
+										Functions.LogAdminAction(nil, "Unban", v.Name, "Webmaster Unbanned " .. v.Name)
+										unbanned = true
+										Admin.RemoveTimeBan(v)
+										print("[Adonis][WebSocket] Successfully unbanned player:", v.Name)
+									else
+										print("[Adonis][WebSocket] Player is not banned in Adonis ban list:", v.Name, userId)
+									end
+								else
+									print("[Adonis][WebSocket] UserId was not found in ban list or not currently in game:", userId)
+								end
+								
+								-- Try to force unban through Roblox API as last resort
+								local config = {
+									UserIds = { userId },
+									ApplyToUniverse = true,
+								}
+								
+								local success, err = pcall(function()
+									return service.Players:UnbanAsync(config)
+								end)
+								
+								if success then
+									print("[Adonis][WebSocket] Successfully called Roblox UnbanAsync API for UserId:", userId)
+									unbanned = true
+									Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Force Unbanned UserId " .. tostring(userId))
+								else
+									print("[Adonis][WebSocket] Roblox UnbanAsync API failed:", err)
+								end
+							end
+							
+							-- Check if unban was successful
+							if unbanned then
+								print("[Adonis][WebSocket] Successfully processed unban for UserId:", userId)
+							else
+								print("[Adonis][WebSocket] Unban action failed for UserId:", userId, "- User likely not banned")
+							end
+						elseif data.action == "WARNPLAYER" then
+							local v = service.Players:GetPlayerByUserId(tonumber(data.userId))
+							if level >= 1000 then
+								warn("[Adonis][WebSocket][Debug] Cannot kick place Owners.", v.Name)
+								return
+							end
+							--Functions.LogAdminAction(nil, "Warn", v.Name, "Webmaster Warned " .. v.Name .. " Reason: " .. (data.reason or "No reason provided"))
+							--Remote.RemoveGui(v, "Notify")
+							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
+						elseif data.action == "GAMECREATED" then
+							Functions.Notification("IMPORTANT", "Your Game has never been linked before! Please link it using the following code: "..data.connectionString, {p})
+							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
+						elseif data.action == "BANPLAYER" then
+							print("[Adonis][WebSocket] Ban action received, banning player...", data)
+							print("[Adonis][WebSocket][Debug] Data received for BANPLAYER:", service.HttpService:JSONEncode(data))
+							if string.lower(data.length) == "permanent" or string.lower(data.length) == "perm" then
+								local v
+								for _, player in ipairs(service.Players:GetPlayers()) do
+									print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
+									if tostring(player.UserId) == tostring(data.userId) then
+										v = player
+										break
+									end
+								end
+								if v then
+									local level, rank = Admin.GetLevel(v)
+									if level >= 1000 then
+										warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
+										return
+									end
+									local alreadyBanned = Admin.CheckBan(v)
+									if not alreadyBanned then
+										local reason = data.reason or "No reason provided"
+										print("[Adonis][WebSocket][Debug] Found player for permanent ban:", v.Name)
+										Admin.AddBan(v, reason, true, nil, "Global")
+										Functions.LogAdminAction(nil, "Permanent Ban", v.Name, "Webmaster Banned " .. v.Name .. " Permanently: " .. reason)
+										Functions.Hint(`Game-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
+									else
+										print("[Adonis][WebSocket][Debug] Player already banned:", v.Name)
+									end
+								else
+									warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
+								end
+							else
+								local v
+								for _, player in ipairs(service.Players:GetPlayers()) do
+									print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
+									if tostring(player.UserId) == tostring(data.userId) then
+										v = player
+										break
+									end
+								end
+								if v then
+									local level, rank = Admin.GetLevel(v)
+									if level >= 1000 then
+										warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
+										return
+									end
+									local alreadyBanned = Admin.CheckBan(v)
+									if not alreadyBanned then
+										local reason = data.reason or "No reason provided"
+										local duration = tonumber(data.length)
+										print("[Adonis][WebSocket][Debug] Found player for time ban:", v.Name, "Duration:", duration)
+										if not duration or duration <= 0 then
+											warn("[Adonis][WebSocket][Debug] Invalid duration for time ban:", data.length)
+											return
+										end
+										Admin.AddTimeBan(v, duration, reason)
+										Functions.LogAdminAction(nil, "Time Ban", v.Name, "Webmaster Banned " .. v.Name .. " for: " .. reason .. " (" .. duration .. " seconds)")
+										Functions.Hint(`Time-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
+									else
+										print("[Adonis][WebSocket][Debug] Player already time-banned:", v.Name)
+									end
+								else
+									warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
+								end
+							end
+						end
+					end)
+				end
+
+				hookSocketEvents(Socket)
+					-- Only send if socket is open
+			end
+		end)
+	end
+	initSocket()
 			--// Fire player added
 			service.Events.PlayerAdded:Fire(p)
 			AddLog("Script", {
@@ -1608,8 +1623,9 @@ return function(Vargs, GetEnv)
 				["ServerId"] = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
 				["GameId"] = game.gameId;
 			}
-			sendToAPI(payload, true) -- Force send shutdown message
+			safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Force send shutdown message
 			wait(1)
+			Socket.Disconnect("Server shutting down")
 		end),
 		task.spawn(function ()
 			task.wait(5)
@@ -1618,13 +1634,13 @@ return function(Vargs, GetEnv)
 					return
 				end
 				if Type == Enum.MessageType.MessageError then
-					sendToAPI({
+					safeSocketSend(Socket, service.HttpService:JSONEncode({
 						Type = "LogMessage";
 						Message = message;
 						LogType = Type.Name;
 						ServerId = service.RunService:IsStudio() and "IN STUDIO" or game.JobId;
 						GameId = game.gameId;
-					}, false) -- Send log message
+					}), false) -- Force send log message
 				end
 
 			end)
