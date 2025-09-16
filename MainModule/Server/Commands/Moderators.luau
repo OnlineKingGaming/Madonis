@@ -3918,7 +3918,7 @@ return function(Vargs, env)
 			Commands = {"startergive"};
 			Args = {"player", "toolname"};
 			Description = "Places the desired tool into the target player(s)'s StarterPack";
-			AdminLevel = "Moderators";
+			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
 				local found = {}
 				local temp = service.New("Folder")

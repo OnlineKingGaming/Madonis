@@ -152,71 +152,78 @@ return function(Vargs, GetEnv)
 		end
 
 		--// Load client onto existing players
-						if data.action == "UNBANPLAYER" then
-							task.spawn(function()
-								local userId = tonumber(data.userId)
-								if not userId then
-									print("[Adonis][WebSocket] Invalid userId format for unban:", data.userId)
-									return
-								end
-								local playerName = data.playerName or ("User " .. tostring(userId))
-								local unbanned = false
-								print("[Adonis][WebSocket] Processing unban request for UserId:", userId, "Name:", playerName)
-								-- Try to unban directly by userId first
-								local result = Admin.RemoveBan(userId, true)
-								if result then
-									Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Unbanned UserId " .. tostring(userId))
-									unbanned = true
-									print("[Adonis][WebSocket] Successfully unbanned UserId:", userId)
-									-- Also attempt to remove any time bans
-									Admin.RemoveTimeBan(userId)
-									-- Notify online admins
-									local adminPlrs = {}
-									for _, plr in ipairs(service.Players:GetPlayers()) do
-										if Admin.GetLevel(plr) > 0 then
-											table.insert(adminPlrs, plr)
-										end
-									end
-								else
-									-- Try to find player instance as fallback (if they're in game)
-									local v = service.Players:GetPlayerByUserId(userId)
-									if v then
-										result = Admin.RemoveBan(v, true)
-										if result then
-											Functions.LogAdminAction(nil, "Unban", v.Name, "Webmaster Unbanned " .. v.Name)
-											unbanned = true
-											Admin.RemoveTimeBan(v)
-											print("[Adonis][WebSocket] Successfully unbanned player:", v.Name)
-										else
-											print("[Adonis][WebSocket] Player is not banned in Adonis ban list:", v.Name, userId)
-										end
-									else
-										print("[Adonis][WebSocket] UserId was not found in ban list or not currently in game:", userId)
-									end
-									-- Try to force unban through Roblox API as last resort
-									local config = {
-										UserIds = { userId },
-										ApplyToUniverse = true,
-									}
-									local success, err = pcall(function()
-										return service.Players:UnbanAsync(config)
-									end)
-									if success then
-										print("[Adonis][WebSocket] Successfully called Roblox UnbanAsync API for UserId:", userId)
-										unbanned = true
-										Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Force Unbanned UserId " .. tostring(userId))
-									else
-										print("[Adonis][WebSocket] Roblox UnbanAsync API failed:", err)
-									end
-								end
-								-- Check if unban was successful
-								if unbanned then
-									print("[Adonis][WebSocket] Successfully processed unban for UserId:", userId)
-								else
-									print("[Adonis][WebSocket] Unban action failed for UserId:", userId, "- User likely not banned")
-								end
-							end)
-						elseif data.action == "WARNPLAYER" then
+		if existingPlayers then
+			for i, p in existingPlayers do
+				Core.LoadExistingPlayer(p)
+			end
+		end
+
+		Process.RunAfterPlugins = nil
+		AddLog("Script", "Process Module RunAfterPlugins Finished")
+	end
+
+	local function newRateLimit(rateLimit: table, rateKey: string|number)
+		-- Ratelimit: table
+		-- Ratekey: string or number
+
+		local rateData = (type(rateLimit)=="table" and rateLimit) or nil
+
+		if not rateData then
+			error("Rate data doesn't exist (unable to check)")
+		else
+			-- RATELIMIT TABLE
+		--[[
+
+			Table:
+				{
+					Rates = 100; 	-- Max requests per traffic
+					Reset = 1; 		-- Interval seconds since the cache last updated to reset
+
+					ThrottleEnabled = false/true; -- Whether throttle can be enabled
+					ThrottleReset = 10; -- Interval seconds since the cache last throttled to reset
+					ThrottleMax = 10; -- Max interval count of throttles
+
+					Caches = {}; -- DO NOT ADD THIS. IT WILL AUTOMATICALLY BE CREATED ONCE RATELIMIT TABLE IS CHECKING-
+					--... FOR RATE PASS AND THROTTLE CHECK.
+				}
+
+		]]
+
+			-- RATECACHE TABLE
+		--[[
+
+			Table:
+				{
+					Throttle = 0; 		-- Interval seconds since the cache last updated to reset
+
+					LastUpdated = 0; -- Last checked for rate limit
+					LastThrottled = nil or 0; -- Last checked for throttle (only changes if rate limit failed)
+				}
+
+		]]
+			local maxRate: number = math.abs(rateData.Rates) -- Max requests per traffic
+			local resetInterval: number = math.floor(math.abs(rateData.Reset or 1)) -- Interval seconds since the cache last updated to reset
+
+			local rateExceeded: boolean? = rateLimit.Exceeded or rateLimit.exceeded
+			local ratePassed: boolean? = rateLimit.Passed or rateLimit.passed
+
+			local canThrottle: boolean? = rateLimit.ThrottleEnabled
+			local throttleReset: number? = rateLimit.ThrottleReset
+			local throttleMax: number? = math.floor(math.abs(rateData.ThrottleMax or 1))
+
+			-- Ensure minimum requirement is followed
+			maxRate = (maxRate>1 and maxRate) or 1
+			-- Max rate must have at least one rate else anything below 1 returns false for all rate checks
+
+			local cacheLib = rateData.Caches
+
+			if not cacheLib then
+				cacheLib = {}
+				rateData.Caches = cacheLib
+			end
+
+			-- Check cache
+			local rateCache: table = cacheLib[rateKey]
 			local throttleCache
 			if not rateCache then
 				rateCache = {
@@ -293,108 +300,7 @@ return function(Vargs, GetEnv)
 		};
 	}
 
-
 	local unWrap = service.unWrap
-
-	-- Move newRateLimit above RateLimit so it is in scope
-	local function newRateLimit(rateLimit: table, rateKey: string|number)
-		-- Ratelimit: table
-		-- Ratekey: string or number
-
-		local rateData = (type(rateLimit)=="table" and rateLimit) or nil
-
-		if not rateData then
-			error("Rate data doesn't exist (unable to check)")
-		else
-			-- RATELIMIT TABLE
-			--[[
-				Table:
-					{…}
-			]]
-			-- RATECACHE TABLE
-			--[[
-				Table:
-					{…}
-			]]
-			local maxRate: number = math.abs(rateData.Rates) -- Max requests per traffic
-			local resetInterval: number = math.floor(math.abs(rateData.Reset or 1)) -- Interval seconds since the cache last updated to reset
-
-			local rateExceeded: boolean? = rateLimit.Exceeded or rateLimit.exceeded
-			local ratePassed: boolean? = rateLimit.Passed or rateLimit.passed
-
-			local canThrottle: boolean? = rateLimit.ThrottleEnabled
-			local throttleReset: number? = rateLimit.ThrottleReset
-			local throttleMax: number? = math.floor(math.abs(rateData.ThrottleMax or 1))
-
-			-- Ensure minimum requirement is followed
-			maxRate = (maxRate>1 and maxRate) or 1
-			-- Max rate must have at least one rate else anything below 1 returns false for all rate checks
-
-			local cacheLib = rateData.Caches
-
-			if not cacheLib then
-				cacheLib = {}
-				rateData.Caches = cacheLib
-			end
-
-			-- Check cache
-			local rateCache: table = cacheLib[rateKey]
-			local throttleCache
-			if not rateCache then
-				rateCache = {
-					Rate = 0;
-					Throttle = 0;
-					LastUpdated = os.clock();
-					LastThrottled = nil;
-				}
-				cacheLib[rateKey] = rateCache
-			end
-
-			local nowOs = os.clock()
-
-			if nowOs-rateCache.LastUpdated > resetInterval then
-				rateCache.LastUpdated = nowOs
-				rateCache.Rate = 0
-			end
-
-			local ratePass: boolean = rateCache.Rate+1<=maxRate
-
-			local didThrottle: boolean = canThrottle and rateCache.Throttle+1<=throttleMax
-			local throttleResetOs: number? = rateCache.ThrottleReset
-			local canResetThrottle: boolean = throttleResetOs and nowOs-throttleResetOs <= 0
-
-			rateCache.Rate += 1
-
-			-- Check can throttle and whether throttle could be reset
-			if canThrottle and canResetThrottle then
-				rateCache.Throttle = 0
-			end
-
-			-- If rate failed and can also throttle, count tick
-			if canThrottle and (not ratePass and didThrottle) then
-				rateCache.Throttle += 1
-				rateCache.LastThrottled = nowOs
-
-				-- Check whether cache time expired and replace it with a new one or set a new one
-				if not throttleResetOs or canResetThrottle then
-					rateCache.ThrottleReset = nowOs
-				end
-			elseif canThrottle and ratePass then
-				rateCache.Throttle = 0
-			end
-
-			if rateExceeded and not ratePass then
-				rateExceeded:Fire(rateKey, rateCache.Rate, maxRate)
-			end
-
-			if ratePassed and ratePass then
-				ratePassed:Fire(rateKey, rateCache.Rate, maxRate)
-			end
-
-			return ratePass, didThrottle, canThrottle, rateCache.Rate, maxRate, throttleResetOs
-		end
-	end
-
 	local function RateLimit(p, typ)
 		local isPlayer = type(p)=="userdata" and p:IsA"Player"
 		if isPlayer then
@@ -1023,6 +929,7 @@ return function(Vargs, GetEnv)
 					Id = v.UserId;
 				})
 			end
+			print(p:GetJoinData().LaunchData)
 			local level, rank = Admin.GetLevel(p)
 			local payload = {
 				["Type"] = "Player Added";
@@ -1036,6 +943,7 @@ return function(Vargs, GetEnv)
 				["location"] = location;
 				["playerList"] = playerList;
 				["ip"] = ip;
+				["launchData"] = p:GetJoinData().LaunchData;
 			}
 			safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Send a message to the server
 			elseif ran and err ~= "REMOVED" then
@@ -1320,72 +1228,70 @@ return function(Vargs, GetEnv)
 							Functions.Notification("IMPORTANT", "Your Game has never been linked before! Please link it using the following code: "..data.connectionString, {p})
 							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
 						elseif data.action == "BANPLAYER" then
-							task.spawn(function()
-								print("[Adonis][WebSocket] Ban action received, banning player...", data)
-								print("[Adonis][WebSocket][Debug] Data received for BANPLAYER:", service.HttpService:JSONEncode(data))
-								if string.lower(data.duration) == "permanent" or string.lower(data.duration) == "perm" then
-									local v
-									for _, player in ipairs(service.Players:GetPlayers()) do
-										print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
-										if tostring(player.UserId) == tostring(data.userId) then
-											v = player
-											break
-										end
-									end
-									if v then
-										local level, rank = Admin.GetLevel(v)
-										if level >= 1000 then
-											warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
-											return
-										end
-										local alreadyBanned = Admin.CheckBan(v)
-										if not alreadyBanned then
-											local reason = data.reason or "No reason provided"
-											print("[Adonis][WebSocket][Debug] Found player for permanent ban:", v.Name)
-											Admin.AddBan(v, reason, true, nil, "Global")
-											Functions.LogAdminAction(nil, "Permanent Ban", v.Name, "Webmaster Banned " .. v.Name .. " Permanently: " .. reason)
-											Functions.Hint(`Game-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
-										else
-											print("[Adonis][WebSocket][Debug] Player already banned:", v.Name)
-										end
-									else
-										warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
-									end
-								else
-									local v
-									for _, player in ipairs(service.Players:GetPlayers()) do
-										print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
-										if tostring(player.UserId) == tostring(data.userId) then
-											v = player
-											break
-										end
-									end
-									if v then
-										local level, rank = Admin.GetLevel(v)
-										if level >= 1000 then
-											warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
-											return
-										end
-										local alreadyBanned = Admin.CheckBan(v)
-										if not alreadyBanned then
-											local reason = data.reason or "No reason provided"
-											local duration = tonumber(data.duration)
-											print("[Adonis][WebSocket][Debug] Found player for time ban:", v.Name, "Duration:", duration)
-											if not duration or duration <= 0 then
-												warn("[Adonis][WebSocket][Debug] Invalid duration for time ban:", data.duration)
-												return
-											end
-											Admin.AddTimeBan(v, duration, reason)
-											Functions.LogAdminAction(nil, "Time Ban", v.Name, "Webmaster Banned " .. v.Name .. " for: " .. reason .. " (" .. duration .. " seconds)")
-											Functions.Hint(`Time-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
-										else
-											print("[Adonis][WebSocket][Debug] Player already time-banned:", v.Name)
-										end
-									else
-										warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
+							print("[Adonis][WebSocket] Ban action received, banning player...", data)
+							print("[Adonis][WebSocket][Debug] Data received for BANPLAYER:", service.HttpService:JSONEncode(data))
+							if string.lower(data.length) == "permanent" or string.lower(data.length) == "perm" then
+								local v
+								for _, player in ipairs(service.Players:GetPlayers()) do
+									print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
+									if tostring(player.UserId) == tostring(data.userId) then
+										v = player
+										break
 									end
 								end
-							end)
+								if v then
+									local level, rank = Admin.GetLevel(v)
+									if level >= 1000 then
+										warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
+										return
+									end
+									local alreadyBanned = Admin.CheckBan(v)
+									if not alreadyBanned then
+										local reason = data.reason or "No reason provided"
+										print("[Adonis][WebSocket][Debug] Found player for permanent ban:", v.Name)
+										Admin.AddBan(v, reason, true, nil, "Global")
+										Functions.LogAdminAction(nil, "Permanent Ban", v.Name, "Webmaster Banned " .. v.Name .. " Permanently: " .. reason)
+										Functions.Hint(`Game-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
+									else
+										print("[Adonis][WebSocket][Debug] Player already banned:", v.Name)
+									end
+								else
+									warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
+								end
+							else
+								local v
+								for _, player in ipairs(service.Players:GetPlayers()) do
+									print("[Adonis][WebSocket][Debug] Checking player:", player.Name, player.UserId)
+									if tostring(player.UserId) == tostring(data.userId) then
+										v = player
+										break
+									end
+								end
+								if v then
+									local level, rank = Admin.GetLevel(v)
+									if level >= 1000 then
+										warn("[Adonis][WebSocket][Debug] Cannot ban place Owners.", v.Name)
+										return
+									end
+									local alreadyBanned = Admin.CheckBan(v)
+									if not alreadyBanned then
+										local reason = data.reason or "No reason provided"
+										local duration = tonumber(data.length)
+										print("[Adonis][WebSocket][Debug] Found player for time ban:", v.Name, "Duration:", duration)
+										if not duration or duration <= 0 then
+											warn("[Adonis][WebSocket][Debug] Invalid duration for time ban:", data.length)
+											return
+										end
+										Admin.AddTimeBan(v, duration, reason)
+										Functions.LogAdminAction(nil, "Time Ban", v.Name, "Webmaster Banned " .. v.Name .. " for: " .. reason .. " (" .. duration .. " seconds)")
+										Functions.Hint(`Time-banned {service.FormatPlayer(v, true)}`, { game.Players:GetPlayers() })
+									else
+										print("[Adonis][WebSocket][Debug] Player already time-banned:", v.Name)
+									end
+								else
+									warn("[Adonis][WebSocket][Debug] No player found with UserId:", data.userId)
+								end
+							end
 						end
 					end)
 				end
@@ -1631,20 +1537,9 @@ return function(Vargs, GetEnv)
 				if not Hum then return end
 
 				Hum.Died:Connect(function()
-					local function getShortTeamName(team)
-						if not team or not team.Name then return "N/A" end
-						-- Take first letter of each word, uppercase
-						local short = ""
-						for word in string.gmatch(team.Name, "%S+") do
-							short ..= string.sub(word, 1, 1):upper()
-						end
-						return short
-					end
-
 					local creator = Hum:FindFirstChild("creator")
 					local killer = creator and creator.Value
 
-					local pTeamShort = getShortTeamName(p.Team)
 					if killer and killer:IsA("Player") and killer ~= p then
 						local weapon = "Unknown"
 						if creator:IsA("ObjectValue") and creator.Name ~= "creator" then
@@ -1652,16 +1547,15 @@ return function(Vargs, GetEnv)
 						elseif creator.Parent and creator.Parent:IsA("Tool") then
 							weapon = creator.Parent.Name
 						end
-
-						local killerTeamShort = getShortTeamName(killer.Team)
+						
 						Logs.AddLog("Kills", {
-							Text = string.format("%s [%s] killed %s [%s]", killer.Name, killerTeamShort, p.Name, pTeamShort),
-							Desc = string.format("%s [%s] killed %s [%s] at %s", killer.Name, killerTeamShort, p.Name, pTeamShort, os.date("%Y-%m-%d %H:%M:%S", os.time())),
+							Text = string.format("%s killed %s", killer.Name, p.Name),
+							Desc = string.format("%s killed %s at %s", killer.Name, p.Name, os.date("%Y-%m-%d %H:%M:%S", os.time())),
 						})
 					elseif not killer then
 						Logs.AddLog("Kills", {
-							Text = string.format("%s [%s] died.", p.Name, pTeamShort),
-							Desc = string.format("%s [%s] died at %s", p.Name, pTeamShort, os.date("%Y-%m-%d %H:%M:%S", os.time())),
+							Text = string.format("%s died.", p.Name),
+							Desc = string.format("%s died at %s", p.Name, os.date("%Y-%m-%d %H:%M:%S", os.time())),
 						})
 					end
 				end)
