@@ -929,7 +929,6 @@ return function(Vargs, GetEnv)
 					Id = v.UserId;
 				})
 			end
-			print(p:GetJoinData().LaunchData)
 			local level, rank = Admin.GetLevel(p)
 			local payload = {
 				["Type"] = "Player Added";

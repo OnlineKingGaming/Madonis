@@ -2646,10 +2646,24 @@ return function(Vargs, env)
 					Variables.TrackingTable[plr.Name] = {}
 				end
 
+				local trackedNames = {}
+				local isAll = false
+				do
+					local arg = args[1]
+					if arg and (arg:lower() == "all" or arg:lower() == "others") then
+						isAll = true
+					else
+						for _, v: Player in service.GetPlayers(plr, arg) do
+							trackedNames[v.Name:lower()] = true
+						end
+					end
+				end
+
 				local function addTracker(target: Player)
 					local char = target.Character
 					if not char then
 						target.CharacterAdded:Wait()
+						char = target.Character
 					end
 
 					local rootPart = char:FindFirstChild("HumanoidRootPart")
@@ -2720,20 +2734,24 @@ return function(Vargs, env)
 					Variables.TrackingTable[plr.Name]._connections = {}
 
 					local playerAddedConn = service.Players.PlayerAdded:Connect(function(newPlr)
-						Variables.TrackingTable[plr.Name][newPlr] = true
-						addTracker(newPlr)
-						newPlr.CharacterAdded:Connect(function()
+						if isAll or trackedNames[newPlr.Name:lower()] then
+							Variables.TrackingTable[plr.Name][newPlr] = true
 							addTracker(newPlr)
-						end)
+							newPlr.CharacterAdded:Connect(function()
+								addTracker(newPlr)
+							end)
+						end
 					end)
 					table.insert(Variables.TrackingTable[plr.Name]._connections, playerAddedConn)
 
 					-- For all tracked players, listen for respawn
 					for _, trackedPlr in service.Players:GetPlayers() do
-						local charAddedConn = trackedPlr.CharacterAdded:Connect(function()
-							addTracker(trackedPlr)
-						end)
-						table.insert(Variables.TrackingTable[plr.Name]._connections, charAddedConn)
+						if isAll or trackedNames[trackedPlr.Name:lower()] then
+							local charAddedConn = trackedPlr.CharacterAdded:Connect(function()
+								addTracker(trackedPlr)
+							end)
+							table.insert(Variables.TrackingTable[plr.Name]._connections, charAddedConn)
+						end
 					end
 				end
 			end

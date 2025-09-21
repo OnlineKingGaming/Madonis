@@ -564,5 +564,16 @@ return function(Vargs, env)
 			end
 		};
 
+		Training = {
+			Prefix = Settings.Prefix;
+			Commands = {"training", "trainmod"};
+			Args = {};
+			Description = ``;
+			AdminLevel = "Team Member";
+			Function = function(plr: Player, args: {string})
+				
+			end
+		};
+
 	}
 end

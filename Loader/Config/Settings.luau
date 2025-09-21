@@ -392,21 +392,21 @@ settings.Allowed_API_Calls = {
 
 --// IF YOU EXPERIENCE ISSUES WITH FALSE POSITIVES/RANDOM KICKING/CRASHING DISABLE ALL OF THESE!
 
-settings.AllowClientAntiExploit = true 	-- (Default: false) Allows use of client-sided anti exploit functionality if true
-settings.Detection = true					-- (Default: false) If true: enables built-in anti-exploit detections that do not have their own settings.
+settings.AllowClientAntiExploit = false 	-- (Default: false) Allows use of client-sided anti exploit functionality if true
+settings.Detection = false					-- (Default: false) If true: enables built-in anti-exploit detections that do not have their own settings.
 settings.CheckClients = true				-- (Default: true) 	Checks clients every minute or two to make sure they are still active.
 
 settings.ExploitNotifications = true        -- (Default: true)	Notify all moderators and higher-ups when a player is kicked or crashed from the AntiExploit.
-settings.CharacterCheckLogs = true			-- (Default: false)	If the character checks appear in exploit logs and exploit notifications.
-settings.AntiNoclip = true					-- (Default: false)	Attempts to detect noclipping and kills the player if found.
-settings.AntiRootJointDeletion = true		-- (Default: false)	Attempts to detect paranoid and kills the player if found.
-settings.AntiMultiTool = true 				-- (Default: false)	Prevents multitool and because of that many other exploits.
+settings.CharacterCheckLogs = false			-- (Default: false)	If the character checks appear in exploit logs and exploit notifications.
+settings.AntiNoclip = false					-- (Default: false)	Attempts to detect noclipping and kills the player if found.
+settings.AntiRootJointDeletion = false		-- (Default: false)	Attempts to detect paranoid and kills the player if found.
+settings.AntiMultiTool = false 				-- (Default: false)	Prevents multitool and because of that many other exploits.
 settings.AntiGod = false 					-- (Default: false)	If a player does not respawn when they should have they get respawned.
 
-settings.AntiSpeed = true 				-- (Default: false)	(Client-Sided) Attempts to detect speed exploits.
-settings.AntiBuildingTools = true		-- (Default: false)	(Client-Sided) Attempts to detect any HopperBin(s)/Building Tools added to the client.
-settings.AntiAntiIdle = true 			-- (Default: false)	(Client-Sided) Kick the player if they are using an anti-idle exploit. Highly useful for grinding/farming games.
-settings.ExploitGuiDetection = true 	-- (Default: false)	(Client-Sided) If any exploit GUIs are found in the CoreGui the exploiter gets kicked (If you use StarterGui:SetCore("SendNotification") with an image this will kick you).
+settings.AntiSpeed = false 				-- (Default: false)	(Client-Sided) Attempts to detect speed exploits.
+settings.AntiBuildingTools = false		-- (Default: false)	(Client-Sided) Attempts to detect any HopperBin(s)/Building Tools added to the client.
+settings.AntiAntiIdle = false 			-- (Default: false)	(Client-Sided) Kick the player if they are using an anti-idle exploit. Highly useful for grinding/farming games.
+settings.ExploitGuiDetection = false 	-- (Default: false)	(Client-Sided) If any exploit GUIs are found in the CoreGui the exploiter gets kicked (If you use StarterGui:SetCore("SendNotification") with an image this will kick you).
 
 ---------------------
 -- END OF SETTINGS --

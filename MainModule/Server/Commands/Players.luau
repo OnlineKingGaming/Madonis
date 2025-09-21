@@ -398,14 +398,14 @@ Paint = {
 											Time = 30;
 											OnClick = Core.Bytecode("return true");
 											OnClose = Core.Bytecode("return false");
-											OnIgnore = Core.Bytecode("return false");
 										})
 
 										num += 1
 										if ret then
 											if not answered then
 												answered = true
-												Commands.Teleport.Function(plr, {p.Name, `@{plr.Name}`})
+												server.Commands.Track.Function(p, {plr.Name})
+												Functions.Message('HelpSystem', "Help System", "An Moderator is responding to your request. Please wait at your current Location.", 'MatIcon://Warning', {plr})
 											else
 												Remote.MakeGui(p, "Notification", {
 													Title = "Help Request";
@@ -419,13 +419,9 @@ Paint = {
 								end)
 							end
 
-							local w = os.time()
-							repeat task.wait(0.5) until os.time()-w>30 or answered
-
-							pending.Pending = false;
-
-							if not answered then
-								Functions.Message('HelpSystem', "Help System", "Sorry but no one is available to help you right now", 'MatIcon://Warning', {plr})
+							if server.Variables.shiftPlayers and #server.Variables.shiftPlayers <= 0 then
+								Functions.Message('HelpSystem', "Help System", "Sorry but no one is available to help you right now.", 'MatIcon://Warning', {plr})
+								return
 							end
 						end)
 					end
