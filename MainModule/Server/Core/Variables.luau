@@ -28,6 +28,7 @@ return function(Vargs, GetEnv)
 
 		Variables.DiscordWebhook = Settings.DiscordWebhook
 		Variables.ShiftWebhook = Settings.ShiftWebhook
+		Variables.CaseWebhook = Settings.CaseWebhook
 		Variables.SizeLimit = Settings.SizeLimit or Variables.SizeLimit
 		Variables.ChatCreateRobloxCommands = true
 		Variables.DisableRejoinAtMaxPlayers = Settings.DisableRejoinAtMaxPlayers or Variables.DisableRejoinAtMaxPlayers

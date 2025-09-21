@@ -1165,6 +1165,86 @@ return function(Vargs, GetEnv)
 			end
 		end;
 
+		LogCaseAction = function(plr, caseAction, targetPlayerName, additionalDetails)
+			if Variables.CaseWebhook then
+				task.spawn(function ()
+					local webhookUrl = Variables.CaseWebhook
+					local httpService = game:GetService("HttpService")
+					local id = plr and plr.UserId or 0
+					local playerLevel, rank = plr and Admin.GetLevel(plr) or "N/A"
+					if playerLevel == 1000 then
+						rank = "Place Owner"
+					end
+					
+					-- Get case information if available
+					local caseInfo = ""
+					if Variables.HelpRequests and Variables.HelpRequests[targetPlayerName] then
+						local case = Variables.HelpRequests[targetPlayerName]
+						local timeStr = case.Time and os.date("!%Y-%m-%d %H:%M:%S UTC", case.Time) or "Unknown"
+						local reason = case.Reason or "No reason provided"
+						caseInfo = `\nCase created: {timeStr}\nReason: {reason}`
+					end
+					
+					local payload = {
+						username = "Adonis Case Logs",
+						embeds = {
+							{
+								title = `Case Action: {caseAction}`,
+								url = plr and `https://www.roblox.com/users/{id}/profile` or nil,
+								fields = {
+									{
+										name = "Target Player",
+										value = targetPlayerName,
+										inline = true
+									},
+									{
+										name = "Moderator",
+										value = plr and plr.Name or "System",
+										inline = true
+									},
+									{
+										name = "Admin Level",
+										value = rank or playerLevel,
+										inline = true
+									},
+									{
+										name = "Action Details",
+										value = additionalDetails .. caseInfo
+									},
+									{
+										name = "Server Info",
+										value = `Private Server: {(game.PrivateServerId and game.PrivateServerId ~= "") and "Yes" or "No"}\nPlayer Count: {#service.Players:GetPlayers()}/{service.Players.MaxPlayers}`
+									}
+								},
+								color = caseAction == "CLAIM" and 3447003 or caseAction == "CLOSE" and 15158332 or caseAction == "AUTO_CLOSE" and 10181046 or 9807270, -- Blue for claim, red for close, orange for auto-close, gray for others
+								timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+							}
+						}
+					}
+	
+					local function sendWebhook()
+						local success, err = pcall(function()
+							local response = httpService:PostAsync(webhookUrl, httpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+							return response
+						end)
+	
+						if not success then
+							if tostring(err):find("429") then
+								local retryAfter = tonumber(err:match("retry_after\":(%d+)")) or 30
+								warn("Rate limit exceeded. Retrying after " .. retryAfter .. " seconds.")
+								task.wait(retryAfter)
+								sendWebhook()
+							else
+								warn("Failed to send Discord webhook: " .. tostring(err))
+							end
+						end
+					end
+	
+					sendWebhook()
+				end)
+			end
+		end;
+
 		NewParticle = function(target, particleType, props)
 			local ind = service.HttpService:GenerateGUID(false)
 			Variables.LocalEffects[ind] = {

@@ -141,8 +141,12 @@ settings.DataStore = "Madonis_Admin_System"					 -- DataStore the script will us
 settings.DataStoreKey = "madonis_change_me"			 -- CHANGE THIS TO ANYTHING RANDOM! Key used to encrypt all datastore entries; Changing this will lose any saved data
 settings.DataStoreEnabled = true				 -- Disable if you don't want to load settings and admins from the datastore; PlayerData will still save
 settings.LocalDatastore = false				 	 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
+
+
 settings.DiscordWebhook = "" 					 -- Discord webhook URL for logging; Leave blank to disable
 settings.ShiftWebhook = ""
+settings.CaseWebhook = ""				 -- Discord webhook URL for logging moderation cases; Leave blank to disable
+
 settings.DisableErrorLogging = true		 -- If true; Errors wont be sent to the Dashboard.
 
 settings.Storage = game:GetService("ServerStorage") -- Where things like tools are stored
@@ -420,6 +424,8 @@ descs.DataStoreKey = [[ Key used to encode all datastore entries; Changing this 
 descs.DataStoreEnabled = [[ Disable if you don't want settings and admins to be saveable in-game; PlayerData will still save ]]
 descs.LocalDatastore = [[ If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers ]]
 descs.DiscordWebhook = [[ Discord webhook URL for logging; Leave blank to disable ]]
+descs.ShiftWebhook = [[ Discord webhook URL for shift logging; Leave blank to disable ]]
+descs.CaseWebhook = [[ Discord webhook URL for moderation case logging; Leave blank to disable ]]
 
 descs.Storage = [[ Where things like tools are stored ]]
 descs.RecursiveTools = [[ Whether tools that are included in sub-containers within settings.Storage will be available via the :give command (useful if your tools are organized into multiple folders) ]]

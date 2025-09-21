@@ -826,6 +826,8 @@ return function(Vargs, GetEnv)
 				end
 			end;
 
+
+
 			SaveTableAdd = function(p: Player, args: {[number]: any})
 				if Admin.GetLevel(p) >= Settings.Ranks.Creators.Level then
 					local tabName = args[1];

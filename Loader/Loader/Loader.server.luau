@@ -44,6 +44,7 @@ if mutex then
 	else
 		warn("Madonis mutex detected but is not a StringValue! Aborting anyway...; This Location:", script:GetFullName())
 	end
+	return -- Exit the script if mutex already exists
 else
 	mutex = Instance.new("StringValue")
 	mutex.Name = "__Madonis_MUTEX"

@@ -384,42 +384,47 @@ Paint = {
 								Time = os.time();
 								Pending = true;
 								Reason = reason;
+								isIngame = true;
 							}
 
 							Variables.HelpRequests[plr.Name] = pending;
 
+							-- Log case creation to webhook
+							Functions.LogCaseAction(nil, "CREATE", plr.Name, `Player {plr.Name} created a help case. Reason: {reason}`)
+
+							-- Refresh case list for all moderators
+							if Remote and Remote.RefreshCaseList then
+								Remote.RefreshCaseList()
+							end
+
 							for ind, p in service.Players:GetPlayers() do
 								Routine(function()
-									if Admin.CheckAdmin(p) then
+									if Admin.CheckAdmin(p) and not plr.Name == p.Name then
 										local ret = Remote.MakeGuiGet(p, "Notification", {
 											Title = "Help Request";
 											Message = `{plr.Name} needs help! Reason: {pending.Reason}`;
 											Icon = server.MatIcons.Mail;
 											Time = 30;
-											OnClick = Core.Bytecode("return true");
-											OnClose = Core.Bytecode("return false");
+											OnClick = Core.Bytecode(string.format([[
+												-- Use claim command directly
+												client.Remote.Send('ProcessCommand','%sclaim %s')
+												return true
+											]], Settings.Prefix[1], plr.Name));
+											OnIgnore = Core.Bytecode("return false");
 										})
 
 										num += 1
 										if ret then
+											-- The claiming logic is now handled in the OnClick callback
 											if not answered then
 												answered = true
-												server.Commands.Track.Function(p, {plr.Name})
-												Functions.Message('HelpSystem', "Help System", "An Moderator is responding to your request. Please wait at your current Location.", 'MatIcon://Warning', {plr})
-											else
-												Remote.MakeGui(p, "Notification", {
-													Title = "Help Request";
-													Message = "Another admin has already responded to this request!";
-													Icon = server.MatIcons.Mail;
-													Time = 5;
-												})
 											end
 										end
 									end
 								end)
 							end
 
-							if server.Variables.shiftPlayers and #server.Variables.shiftPlayers <= 0 then
+							if Variables.shiftPlayers and not next(Variables.shiftPlayers) then
 								Functions.Message('HelpSystem', "Help System", "Sorry but no one is available to help you right now.", 'MatIcon://Warning', {plr})
 								return
 							end

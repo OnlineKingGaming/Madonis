@@ -1050,6 +1050,28 @@ return function(Vargs, GetEnv)
 				Commands.UnDisguise.Function(p, {"me"})
 			end
 
+			-- Auto-close unclaimed help cases when player leaves
+			if Variables.HelpRequests and Variables.HelpRequests[p.Name] then
+				local playerCase = Variables.HelpRequests[p.Name]
+				if playerCase.Pending and not playerCase.ClaimedBy then
+					-- Only auto-close if the case is unclaimed
+					Variables.HelpRequests[p.Name] = nil
+					AddLog("Script", {
+						Text = `Auto-closed unclaimed case for {p.Name}`;
+						Desc = `Player left with unclaimed help case`;
+						Player = p;
+					})
+					
+					-- Log case action to webhook
+					Functions.LogCaseAction(nil, "AUTO_CLOSE", p.Name, `Player {p.Name} left the server with an unclaimed help case`)
+					
+					-- Refresh case list for all moderators
+					if Remote and Remote.RefreshCaseList then
+						pcall(Remote.RefreshCaseList)
+					end
+				end
+			end
+
 			Variables.IncognitoPlayers[p] = nil
 
 			local OnShift = server.Variables.shiftPlayers[p.UserId]
@@ -1224,6 +1246,9 @@ return function(Vargs, GetEnv)
 							--Remote.RemoveGui(v, "Notify")
 							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
 						elseif data.action == "GAMECREATED" then
+							if not Admin.IsPlaceOwner(p) then
+								return
+							end
 							Functions.Notification("IMPORTANT", "Your Game has never been linked before! Please link it using the following code: "..data.connectionString, {p})
 							--Functions.Notify(`Warning from {service.FormatPlayer(plr)}`, reason, {v})
 						elseif data.action == "BANPLAYER" then
