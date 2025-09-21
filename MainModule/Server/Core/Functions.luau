@@ -1213,7 +1213,7 @@ return function(Vargs, GetEnv)
 									},
 									{
 										name = "Server Info",
-										value = `Private Server: {(game.PrivateServerId and game.PrivateServerId ~= "") and "Yes" or "No"}\nPlayer Count: {#service.Players:GetPlayers()}/{service.Players.MaxPlayers}`
+										value = `Private Server: {(game.PrivateServerOwnerId ~= 0) and "Yes" or "No"}\nPlayer Count: {#service.Players:GetPlayers()}/{service.Players.MaxPlayers}`
 									}
 								},
 								color = caseAction == "CLAIM" and 3447003 or caseAction == "CLOSE" and 15158332 or caseAction == "AUTO_CLOSE" and 10181046 or 9807270, -- Blue for claim, red for close, orange for auto-close, gray for others

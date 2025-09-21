@@ -142,7 +142,6 @@ settings.DataStoreKey = "madonis_change_me"			 -- CHANGE THIS TO ANYTHING RANDOM
 settings.DataStoreEnabled = true				 -- Disable if you don't want to load settings and admins from the datastore; PlayerData will still save
 settings.LocalDatastore = false				 	 -- If this is turned on, a mock DataStore will forcibly be used instead and shall never save across servers
 
-
 settings.DiscordWebhook = "" 					 -- Discord webhook URL for logging; Leave blank to disable
 settings.ShiftWebhook = ""
 settings.CaseWebhook = ""				 -- Discord webhook URL for logging moderation cases; Leave blank to disable
