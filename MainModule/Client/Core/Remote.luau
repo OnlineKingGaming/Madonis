@@ -360,6 +360,102 @@ return function(Vargs, GetEnv)
 					Pcall(handler, unpack(args, 2))
 				end
 			end;
+
+			UpdateTrainingMonitor = function(args)
+				local data = args[1]
+				print("[UpdateTrainingMonitor] Received update:", data.UpdateType)
+				if data.TraineeData then
+					print("  Commands in session:", #data.TraineeData.CommandLog)
+				end
+				
+				-- Find the existing TrainingMonitor window
+				local trainingWindow
+				print(`[UpdateTrainingMonitor] Searching through {#client.GUIs} GUI windows`)
+				for i, gui in client.GUIs do
+					print(`  GUI {i}: Name={gui.Name}, Active={gui.Object and gui.Object.Parent and "yes" or "no"}`)
+					if gui.Name == "TrainingMonitor" and gui.Object and gui.Object.Parent then
+						trainingWindow = gui
+						print("[UpdateTrainingMonitor] Found TrainingMonitor window!")
+						break
+					end
+				end
+				
+				if not trainingWindow then
+					print("[UpdateTrainingMonitor] ERROR: No TrainingMonitor window found! Available GUIs:")
+					for i, gui in client.GUIs do
+						print(`  - {gui.Name} (Active: {gui.Object and gui.Object.Parent and "yes" or "no"})`)
+					end
+					return
+				end
+				
+				if not trainingWindow.gTable then
+					print("[UpdateTrainingMonitor] ERROR: TrainingMonitor window has no gTable!")
+					return
+				end
+				
+				-- Update the existing window with new data instead of recreating it
+				local gTable = trainingWindow.gTable
+				
+				-- Update trainee data in the existing gTable
+				if data.TraineeData then
+					gTable.TraineeData = data.TraineeData
+					print("[UpdateTrainingMonitor] Updated TraineeData with", #data.TraineeData.CommandLog, "commands")
+				end
+				
+				-- Always refresh to show updates (timer and commands)
+				if gTable.refreshCommandList then
+					print("[UpdateTrainingMonitor] Calling refreshCommandList")
+					gTable.refreshCommandList()
+				else
+					print("[UpdateTrainingMonitor] ERROR: refreshCommandList function not found!")
+				end
+				
+				if gTable.updateTimer then
+					print("[UpdateTrainingMonitor] Calling updateTimer")
+					gTable.updateTimer()
+				else
+					print("[UpdateTrainingMonitor] ERROR: updateTimer function not found!")
+				end
+				
+				-- Scroll to bottom to show newest command  
+				if gTable.commandScroller then
+					task.spawn(function()
+						task.wait(0.1)
+						local scroller = gTable.commandScroller
+						if scroller.CanvasSize.Y.Offset > scroller.AbsoluteSize.Y then
+							scroller.CanvasPosition = Vector2.new(0, scroller.CanvasSize.Y.Offset)
+							print("[UpdateTrainingMonitor] Scrolled to bottom to show latest command")
+						end
+					end)
+				else
+					print("[UpdateTrainingMonitor] ERROR: commandScroller not found!")
+				end
+				
+				print("[UpdateTrainingMonitor] Update completed successfully")
+			end;
+
+			EndTrainingSession = function(args)
+				-- This is handled by sending a message to the server to end the training session
+				Remote.Send("EndTrainingSession", args[1]) -- SessionId
+
+				
+			end;
+
+			CloseTrainingMonitor = function(args)
+				print("[CloseTrainingMonitor] Searching for TrainingMonitor window to close")
+				-- Find and close the TrainingMonitor window
+				for i, gui in client.GUIs do
+					if gui.Name == "TrainingMonitor" and gui.Object and gui.Object.Parent then
+						print("[CloseTrainingMonitor] Found and closing TrainingMonitor window")
+						if gui.Close then
+							gui:Close()
+						elseif gui.Object and gui.Object.Destroy then
+							gui.Object:Destroy()
+						end
+						break
+					end
+				end
+			end;
 		};
 
 		Fire = function(...)

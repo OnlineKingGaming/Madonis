@@ -634,6 +634,95 @@ return function(Vargs, GetEnv)
 				end
 				Admin.UpdateCooldown(pDat, command)
 				Functions.LogAdminAction(p, `{matched}`, p.Name, `{Settings.SplitKey}{table.concat(args, Settings.SplitKey)}`)
+				
+				-- Training session command logging
+				print(`[DEBUG] Training session check for {p.Name} (UserId: {p.UserId})`)
+				print(`[DEBUG] Variables.TrainingSessions exists: {Variables.TrainingSessions and "yes" or "no"}`)
+				if Variables.TrainingSessions then
+					print(`[DEBUG] Session for {p.UserId}: {Variables.TrainingSessions[p.UserId] and "exists" or "not found"}`)
+				end
+				if Variables.TrainingSessions and Variables.TrainingSessions[p.UserId] then
+					local session = Variables.TrainingSessions[p.UserId]
+					print(`[DEBUG] Found training session for {p.Name}, logging command: {matched}`)
+					local adminLevel = Admin.GetLevel(p) or 0
+					local commandData = {
+						Command = `{matched}{Settings.SplitKey}{table.concat(args, Settings.SplitKey)}`,
+						Time = os.time(),
+						AdminLevel = adminLevel
+					}
+					
+					table.insert(session.CommandLog, commandData)
+					print(`[DEBUG] Inserted command into log. CommandLog now has {#session.CommandLog} commands`)
+					print(`[DEBUG] Last command: {commandData.Command}`)
+					
+					-- Send to webhook in real time
+					if session.Webhook and session.Webhook ~= "" then
+						task.spawn(function()
+							local payload = {
+								username = "Adonis Training Monitor",
+								embeds = {
+									{
+										title = "🔨 Command Executed",
+										color = 16776960, -- Yellow
+										fields = {
+											{
+												name = "Trainee",
+												value = `{p.DisplayName} (@{p.Name})`,
+												inline = true
+											},
+											{
+												name = "Supervisor",
+												value = `{session.Supervisor.DisplayName} (@{session.Supervisor.Name})`,
+												inline = true
+											},
+											{
+												name = "Command",
+												value = `\`{matched}{Settings.SplitKey}{table.concat(args, Settings.SplitKey)}\``,
+												inline = false
+											},
+											{
+												name = "Time Remaining",
+												value = `{math.floor((session.EndTime - os.time()) / 60)}m {(session.EndTime - os.time()) % 60}s`,
+												inline = true
+											},
+											{
+												name = "Commands Count",
+												value = tostring(#session.CommandLog),
+												inline = true
+											}
+										},
+										timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+									}
+								}
+							}
+							
+							pcall(function()
+								service.HttpService:PostAsync(session.Webhook, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+							end)
+						end)
+					end
+					
+					-- Update supervisor's monitoring GUI without recreating the window
+					if session.Supervisor and session.Supervisor.Parent then
+						print(`[DEBUG] Sending UpdateTrainingMonitor to {session.Supervisor.Name} for command: {matched}`)
+						print(`[DEBUG] Commands in log: {#session.CommandLog}`)
+						print(`[DEBUG] Session CommandLog contents:`)
+						for i, cmd in session.CommandLog do
+							print(`  {i}: {cmd.Command} at {cmd.Time}`)
+						end
+						local updateData = {
+							TraineeData = session,
+							SessionId = session.SessionId,
+							UpdateType = "CommandExecuted",
+							NewCommand = commandData
+						}
+						print(`[DEBUG] UpdateData.TraineeData.CommandLog has {#updateData.TraineeData.CommandLog} commands`)
+						Remote.Send(session.Supervisor, "UpdateTrainingMonitor", updateData)
+					else
+						print(`[DEBUG] Not sending update - supervisor not found or not in game`)
+					end
+				end
+				
 				local returnArgs = table.pack(TrackTask(taskName, command.Function, function(cmdError)
 					if not opts.IgnoreErrors then
 						if type(cmdError) == "string" then
@@ -1034,6 +1123,23 @@ return function(Vargs, GetEnv)
 			Variables.TrackingTable[p.Name] = nil
 			if Variables.ReturnPoints[p] then
 				Variables.ReturnPoints[p] = nil
+			end
+
+			-- Clean up training session if player was in training
+			if Variables.TrainingSessions and Variables.TrainingSessions[p.UserId] then
+				local session = Variables.TrainingSessions[p.UserId]
+				Variables.TrainingSessions[p.UserId] = nil
+				
+				-- Clean up tracking even though player left
+				if Variables.shiftPlayers[p.UserId] then
+					Variables.shiftPlayers[p.UserId] = nil
+				end
+				if Variables.InsertedObjects[p.UserId] then
+					Variables.InsertedObjects[p.UserId] = nil
+				end
+				
+				-- Log the training session end
+				Functions.LogAdminAction(session.Supervisor, "Training Ended (Player Left)", p.Name, `Training session ended due to player leaving. Commands executed: {#session.CommandLog}`)
 			end
 
 			for otherPlrName, trackTargets in Variables.TrackingTable do

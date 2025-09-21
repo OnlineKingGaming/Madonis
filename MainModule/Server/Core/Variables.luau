@@ -29,6 +29,7 @@ return function(Vargs, GetEnv)
 		Variables.DiscordWebhook = Settings.DiscordWebhook
 		Variables.ShiftWebhook = Settings.ShiftWebhook
 		Variables.CaseWebhook = Settings.CaseWebhook
+		Variables.TrainingWebhook = Settings.TrainingWebhook
 		Variables.SizeLimit = Settings.SizeLimit or Variables.SizeLimit
 		Variables.ChatCreateRobloxCommands = true
 		Variables.DisableRejoinAtMaxPlayers = Settings.DisableRejoinAtMaxPlayers or Variables.DisableRejoinAtMaxPlayers
@@ -79,6 +80,8 @@ return function(Vargs, GetEnv)
 		CachedDonors = {},
 		DiscordWebhook = "",
 		ShiftWebhook = "",
+		CaseWebhook = "",
+		TrainingWebhook = "",
 		serverId = "",
 		shiftPlayers = {},
 		peaceTimeActive = false,
@@ -274,6 +277,8 @@ return function(Vargs, GetEnv)
 				Settings = server.Settings.Whitelist
 			},
 		};
+
+		TrainingSessions = {};
 
 		Starter = {
 			Health = {};

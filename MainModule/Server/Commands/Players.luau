@@ -397,9 +397,9 @@ Paint = {
 								Remote.RefreshCaseList()
 							end
 
-							for ind, p in service.Players:GetPlayers() do
+							for _, p in service.Players:GetPlayers() do
 								Routine(function()
-									if Admin.CheckAdmin(p) and not plr.Name == p.Name then
+									if Admin.CheckAdmin(p) and plr.Name ~= p.Name then
 										local ret = Remote.MakeGuiGet(p, "Notification", {
 											Title = "Help Request";
 											Message = `{plr.Name} needs help! Reason: {pending.Reason}`;

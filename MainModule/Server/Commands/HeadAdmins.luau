@@ -518,6 +518,8 @@ return function(Vargs, env)
 			end
 		};
 
+		
+
 		AwardBadge = {
 			Prefix = Settings.Prefix;
 			Commands = {"awardbadge", "badge", "givebadge"};
@@ -567,11 +569,387 @@ return function(Vargs, env)
 		Training = {
 			Prefix = Settings.Prefix;
 			Commands = {"training", "trainmod"};
-			Args = {};
-			Description = ``;
+			Args = {"player", "duration<s/m/h>"};
+			Description = "Gives temporary moderator permissions to a player for training purposes with full command logging and monitoring";
 			AdminLevel = "Team Member";
 			Function = function(plr: Player, args: {string})
+				assert(args[1], "Missing target player (argument #1)")
+				assert(args[2], "Missing duration (argument #2)")
 				
+				-- Parse duration
+				local duration, valid = assert(args[2], "Missing duration (argument #2)"):gsub("^(%d+)([smh])$", function(val, unit)
+					return if unit == "s" then val
+						elseif unit == "m" then val * 60
+						else val * 60 * 60
+				end)
+				assert(valid > 0, "Invalid duration value (argument #2) - use format like 30s, 15m, or 2h")
+				
+				-- Initialize training sessions table if it doesn't exist
+				if not Variables.TrainingSessions then
+					Variables.TrainingSessions = {}
+				end
+				
+				-- Custom webhook for this training session (optional)
+				local customWebhook = Variables.TrainingWebhook or Variables.DiscordWebhook
+				
+				for _, v in service.GetPlayers(plr, args[1]) do
+					local currentLevel = Admin.GetLevel(v)
+					if currentLevel >= 100 then
+						Functions.Hint(`{service.FormatPlayer(v)} is already a moderator or higher`, {plr})
+						continue
+					end
+					
+					-- Check if player is already in training
+					if Variables.TrainingSessions[v.UserId] then
+						Functions.Hint(`{service.FormatPlayer(v)} is already in a training session`, {plr})
+						continue
+					end
+					
+					-- Grant temporary moderator permissions
+					Admin.AddAdmin(v, "Moderators", true)
+					
+					-- Create training session data
+					local sessionData = {
+						Trainee = v,
+						Supervisor = plr,
+						StartTime = os.time(),
+						Duration = tonumber(duration),
+						EndTime = os.time() + tonumber(duration),
+						Webhook = customWebhook,
+						CommandLog = {},
+						SessionId = service.HttpService:GenerateGUID(false),
+						TimeoutTask = nil -- Will be set after task.delay is created
+					}
+					
+					Variables.TrainingSessions[v.UserId] = sessionData
+					
+					-- Log the training start
+					Functions.LogAdminAction(plr, "Start Training", v.Name, `Duration: {args[2]}, Session ID: {sessionData.SessionId}`)
+					
+					-- Send webhook notification about training start
+					if customWebhook and customWebhook ~= "" then
+						task.spawn(function()
+							local payload = {
+								username = "Adonis Training System",
+								embeds = {
+									{
+										title = "🎓 Training Session Started",
+										color = 3447003, -- Blue
+										fields = {
+											{
+												name = "Trainee",
+												value = `{v.DisplayName} (@{v.Name})`,
+												inline = true
+											},
+											{
+												name = "Supervisor", 
+												value = `{plr.DisplayName} (@{plr.Name})`,
+												inline = true
+											},
+											{
+												name = "Duration",
+												value = args[2],
+												inline = true
+											},
+											{
+												name = "Session ID",
+												value = sessionData.SessionId,
+												inline = false
+											}
+										},
+										timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+									}
+								}
+							}
+							
+							pcall(function()
+								service.HttpService:PostAsync(customWebhook, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+							end)
+						end)
+					end
+					
+					-- Create monitoring GUI for supervisor
+					Remote.MakeGui(plr, "TrainingMonitor", {
+						TraineeData = sessionData,
+						SessionId = sessionData.SessionId
+					})
+					
+					-- Notify trainee
+					Functions.Notification("Training Mode", `You are now in training mode for {args[2]}. All commands will be logged.`, {v}, 15, "MatIcon://School")
+					Functions.Hint(`Started training session for {service.FormatPlayer(v)} - Duration: {args[2]}`, {plr})
+					
+					-- Set up timer to remove permissions when session ends
+					local timeoutTask = task.delay(tonumber(duration), function()
+						if Variables.TrainingSessions and Variables.TrainingSessions[v.UserId] then
+							-- Remove training session
+							local session = Variables.TrainingSessions[v.UserId]
+							Variables.TrainingSessions[v.UserId] = nil
+							
+							-- Clean up user state (only if player is still in game)
+							if v.Parent then -- Check if player is still in game
+								-- 1. Remove from shift tracking if they are on shift
+								if Variables.shiftPlayers[v.UserId] then
+									Variables.shiftPlayers[v.UserId] = nil
+									Functions.Notification("Shift Ended", "Your shift has been automatically ended due to training completion.", {v}, 5)
+								end
+								
+								-- 2. Refresh the trainee to reset all states (god, fly, tools, noclip, etc.)
+								task.spawn(function()
+									v:LoadCharacter()
+								end)
+								
+								-- Remove temporary moderator permissions
+								Admin.RemoveAdmin(v, true)
+								Functions.Notification("Training Complete", "Your training session has ended.", {v}, 10, "MatIcon://School")
+							else
+								-- Clean up tracking even if player left
+								if Variables.shiftPlayers[v.UserId] then
+									Variables.shiftPlayers[v.UserId] = nil
+								end
+								if Variables.InsertedObjects[v.UserId] then
+									Variables.InsertedObjects[v.UserId] = nil
+								end
+							end
+							
+							-- Log training completion
+							Functions.LogAdminAction(session.Supervisor, "End Training", v.Name, `Training session completed. Commands executed: {#session.CommandLog}`)
+							
+							-- Send final webhook report
+							if session.Webhook and session.Webhook ~= "" then
+								task.spawn(function()
+									local commandSummary = {}
+									for i, cmd in session.CommandLog do
+										table.insert(commandSummary, `{i}. {cmd.Command} - {os.date("%H:%M:%S", cmd.Time)}`)
+									end
+									
+									local payload = {
+										username = "Adonis Training System",
+										embeds = {
+											{
+												title = "🎓 Training Session Completed",
+												color = 65280, -- Green
+												fields = {
+													{
+														name = "Trainee",
+														value = `{session.Trainee.DisplayName} (@{session.Trainee.Name})`,
+														inline = true
+													},
+													{
+														name = "Supervisor",
+														value = `{session.Supervisor.DisplayName} (@{session.Supervisor.Name})`,
+														inline = true
+													},
+													{
+														name = "Commands Executed",
+														value = tostring(#session.CommandLog),
+														inline = true
+													},
+													{
+														name = "Session Duration",
+														value = `{math.floor(session.Duration / 60)}m {session.Duration % 60}s`,
+														inline = false
+													},
+													{
+														name = "Command Log",
+														value = #commandSummary > 0 and table.concat(commandSummary, "\n") or "No commands executed",
+														inline = false
+													}
+												},
+												timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+											}
+										}
+									}
+									
+									pcall(function()
+										service.HttpService:PostAsync(session.Webhook, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+									end)
+								end)
+							end
+							
+							-- Close supervisor's monitoring GUI if still open
+							Remote.RemoveGui(session.Supervisor, "TrainingMonitor")
+							Remote.Send(session.Supervisor, "CloseTrainingMonitor")
+						end
+					end)
+					
+					-- Store the timeout task reference so it can be cancelled if training ends early
+					if Variables.TrainingSessions[v.UserId] then
+						Variables.TrainingSessions[v.UserId].TimeoutTask = timeoutTask
+					end
+				end
+			end
+		};
+
+		UnTraining = {
+			Prefix = Settings.Prefix;
+			Commands = {"untraining", "untrainmod", "endtraining"};
+			Args = {"player"};
+			Description = "Ends a training session and removes temporary moderator permissions";
+			AdminLevel = "Team Member";
+			Function = function(plr: Player, args: {string})
+				assert(args[1], "Missing target player (argument #1)")
+				
+				if not Variables.TrainingSessions then
+					Functions.Hint("No active training sessions found", {plr})
+					return
+				end
+				
+				for _, v in service.GetPlayers(plr, args[1]) do
+					local session = Variables.TrainingSessions[v.UserId]
+					
+					if not session then
+						Functions.Hint(`{service.FormatPlayer(v)} is not currently in a training session`, {plr})
+						continue
+					end
+					
+					-- Check if the executor is the supervisor or has higher authority
+					if session.Supervisor ~= plr and Admin.GetLevel(plr) <= Admin.GetLevel(session.Supervisor) then
+						Functions.Hint(`You do not have permission to end {service.FormatPlayer(v)}'s training session`, {plr})
+						continue
+					end
+					
+					-- Cancel the timeout task if it exists
+					if session.TimeoutTask then
+						task.cancel(session.TimeoutTask)
+					end
+					
+					-- Remove the training session
+					Variables.TrainingSessions[v.UserId] = nil
+					
+				-- Clean up user state by refreshing them (this resets everything)
+				-- 1. Remove from shift tracking if they are on shift
+				if Variables.shiftPlayers[v.UserId] then
+					Variables.shiftPlayers[v.UserId] = nil
+					Functions.Notification("Shift Ended", "Your shift has been automatically ended due to training completion.", {v}, 5)
+				end
+				
+				-- 2. Refresh the trainee to reset all states (god, fly, tools, noclip, etc.)
+				task.spawn(function()
+					v:LoadCharacter()
+				end)
+
+				-- Remove temporary moderator permissions
+				Admin.RemoveAdmin(v, true)
+
+				-- Notify trainee
+				Functions.Notification("Training Ended", `Your training session has been ended by {plr.DisplayName}. All training effects have been removed.`, {v}, 10, "MatIcon://School")
+					Functions.Hint(`Ended training session for {service.FormatPlayer(v)}`, {plr})
+					
+					-- Show training summary to the executor
+					local duration = os.time() - session.StartTime
+					local minutes = math.floor(duration / 60)
+					local seconds = duration % 60
+					
+					-- Log the action
+					Functions.LogAdminAction(plr, "End Training (Manual)", v.Name, `Commands executed: {#session.CommandLog}, Original supervisor: {session.Supervisor.Name}`)
+					
+					-- Send webhook notification
+					if session.Webhook and session.Webhook ~= "" then
+						task.spawn(function()
+							local commandSummary = {}
+							for i, cmd in session.CommandLog do
+								table.insert(commandSummary, `{i}. {cmd.Command} - {os.date("%H:%M:%S", cmd.Time)}`)
+							end
+							
+							local duration = os.time() - session.StartTime
+							
+							local payload = {
+								username = "Adonis Training System",
+								embeds = {
+									{
+										title = "🛑 Training Session Ended Early",
+										color = 16711680, -- Red
+										fields = {
+											{
+												name = "Trainee",
+												value = `{v.DisplayName} (@{v.Name})`,
+												inline = true
+											},
+											{
+												name = "Ended By",
+												value = `{plr.DisplayName} (@{plr.Name})`,
+												inline = true
+											},
+											{
+												name = "Original Supervisor",
+												value = `{session.Supervisor.DisplayName} (@{session.Supervisor.Name})`,
+												inline = true
+											},
+											{
+												name = "Commands Executed",
+												value = tostring(#session.CommandLog),
+												inline = true
+											},
+											{
+												name = "Actual Duration",
+												value = `{math.floor(duration / 60)}m {duration % 60}s`,
+												inline = false
+											},
+											{
+												name = "Command Log",
+												value = #commandSummary > 0 and table.concat(commandSummary, "\n") or "No commands executed",
+												inline = false
+											}
+										},
+										timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+									}
+								}
+							}
+							
+							pcall(function()
+								service.HttpService:PostAsync(session.Webhook, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+							end)
+						end)
+					end
+					
+					-- Close supervisor's monitoring GUI if open
+					Remote.RemoveGui(session.Supervisor, "TrainingMonitor")
+					Remote.Send(session.Supervisor, "CloseTrainingMonitor")
+
+					if (session.Trainee and session.Trainee.Parent) then
+						session.Trainee:LoadCharacter()
+					end
+				end
+			end
+		};
+
+		TrainingMonitor = {
+			Prefix = Settings.Prefix;
+			Commands = {"trainingmonitor", "trainmonitor", "tmonitor"};
+			Args = {"player"};
+			Description = "Opens the training monitor for an active training session";
+			AdminLevel = "Team Member";
+			Function = function(plr: Player, args: {string})
+				assert(args[1], "Missing target player (argument #1)")
+				
+				if not Variables.TrainingSessions then
+					Functions.Hint("No active training sessions found", {plr})
+					return
+				end
+				
+				for _, v in service.GetPlayers(plr, args[1]) do
+					local session = Variables.TrainingSessions[v.UserId]
+					
+					if not session then
+						Functions.Hint(`{service.FormatPlayer(v)} is not currently in a training session`, {plr})
+						continue
+					end
+					
+					-- Check if the executor is the supervisor or has higher authority
+					if session.Supervisor ~= plr and Admin.GetLevel(plr) <= Admin.GetLevel(session.Supervisor) then
+						Functions.Hint(`You do not have permission to monitor {service.FormatPlayer(v)}'s training session`, {plr})
+						continue
+					end
+					
+					-- Open/reopen the TrainingMonitor for the supervisor
+					Remote.MakeGui(plr, "TrainingMonitor", {
+						TraineeData = session,
+						SessionId = session.SessionId,
+						UpdateType = "Initial"
+					})
+					
+					Functions.Hint(`Opened training monitor for {service.FormatPlayer(v)}`, {plr})
+				end
 			end
 		};
 

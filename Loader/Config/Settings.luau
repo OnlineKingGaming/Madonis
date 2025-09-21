@@ -145,6 +145,7 @@ settings.LocalDatastore = false				 	 -- If this is turned on, a mock DataStore 
 settings.DiscordWebhook = "" 					 -- Discord webhook URL for logging; Leave blank to disable
 settings.ShiftWebhook = ""
 settings.CaseWebhook = ""				 -- Discord webhook URL for logging moderation cases; Leave blank to disable
+settings.TrainingWebhook = ""				 -- Discord webhook URL for logging training sessions; Leave blank to disable
 
 settings.DisableErrorLogging = true		 -- If true; Errors wont be sent to the Dashboard.
 

@@ -198,6 +198,29 @@ return function(Vargs, GetEnv)
 				end
 			end;
 
+			GetTrainingSession = function(p: Player, args: {[number]: any})
+				local sessionId = args[1]
+				if not sessionId or not Variables.TrainingSessions then
+					return nil
+				end
+				
+				-- Find the training session by session ID and verify supervisor
+				for userId, session in Variables.TrainingSessions do
+					if session.SessionId == sessionId and session.Supervisor == p then
+						-- Return a copy of the session data for safety
+						return {
+							SessionId = session.SessionId,
+							Trainee = session.Trainee,
+							StartTime = session.StartTime,
+							EndTime = session.EndTime,
+							CommandLog = session.CommandLog,
+							Supervisor = session.Supervisor
+						}
+					end
+				end
+				return nil
+			end;
+
 			Default = function(p: Player,args: {[number]: any})
 				local setting = args[1]
 				local level = Admin.GetLevel(p)
@@ -967,6 +990,130 @@ return function(Vargs, GetEnv)
 				if type(args[1]) == "string" then
 					Process.Chat(p, args[1])
 				end
+			end;
+
+			EndTrainingSession = function(p: Player, args: {[number]: any})
+				local sessionId = args[1]
+				if not sessionId or not Variables.TrainingSessions then
+					return false
+				end
+				
+				-- Find the training session by session ID
+				local targetSession = nil
+				local targetUserId = nil
+				
+				for userId, session in Variables.TrainingSessions do
+					if session.SessionId == sessionId and session.Supervisor == p then
+						targetSession = session
+						targetUserId = userId
+						break
+					end
+				end
+				
+				if not targetSession then
+					return false
+				end
+				
+				-- Cancel the timeout task if it exists
+				if targetSession.TimeoutTask then
+					task.cancel(targetSession.TimeoutTask)
+				end
+				
+				-- Remove the training session
+				Variables.TrainingSessions[targetUserId] = nil
+				
+				-- Clean up user state and remove temporary moderator permissions if player is still in game
+				if targetSession.Trainee and targetSession.Trainee.Parent then
+					local trainee = targetSession.Trainee
+					
+					-- 1. Remove from shift tracking if they are on shift
+					if Variables.shiftPlayers[trainee.UserId] then
+						Variables.shiftPlayers[trainee.UserId] = nil
+						Functions.Notification("Shift Ended", "Your shift has been automatically ended due to training completion.", {trainee}, 5)
+					end
+					
+					-- 2. Refresh the trainee to reset all states (god, fly, tools, noclip, etc.)
+					task.spawn(function()
+						trainee:LoadCharacter()
+					end)
+					
+					Admin.RemoveAdmin(trainee, true)
+					Functions.Notification("Training Ended", "Your training session has been ended by your supervisor. All training effects have been removed.", {trainee}, 10, "MatIcon://School")
+				else
+					-- Clean up tracking even if player left
+					if targetSession.Trainee then
+						if Variables.shiftPlayers[targetSession.Trainee.UserId] then
+							Variables.shiftPlayers[targetSession.Trainee.UserId] = nil
+						end
+						if Variables.InsertedObjects[targetSession.Trainee.UserId] then
+							Variables.InsertedObjects[targetSession.Trainee.UserId] = nil
+						end
+					end
+				end
+				
+				-- Log the action
+				Functions.LogAdminAction(p, "End Training (Manual)", targetSession.Trainee.Name, `Session ID: {sessionId}, Commands executed: {#targetSession.CommandLog}`)
+				
+				-- Send final webhook report
+				if targetSession.Webhook and targetSession.Webhook ~= "" then
+					task.spawn(function()
+						local commandSummary = {}
+						for i, cmd in targetSession.CommandLog do
+							table.insert(commandSummary, `{i}. {cmd.Command} - {os.date("%H:%M:%S", cmd.Time)}`)
+						end
+						
+						local duration = os.time() - targetSession.StartTime
+						
+						local payload = {
+							username = "Adonis Training System",
+							embeds = {
+								{
+									title = "🛑 Training Session Ended Early",
+									color = 16711680, -- Red
+									fields = {
+										{
+											name = "Trainee",
+											value = `{targetSession.Trainee.DisplayName} (@{targetSession.Trainee.Name})`,
+											inline = true
+										},
+										{
+											name = "Supervisor",
+											value = `{p.DisplayName} (@{p.Name})`,
+											inline = true
+										},
+										{
+											name = "Commands Executed",
+											value = tostring(#targetSession.CommandLog),
+											inline = true
+										},
+										{
+											name = "Actual Duration",
+											value = `{math.floor(duration / 60)}m {duration % 60}s`,
+											inline = false
+										},
+										{
+											name = "Command Log",
+											value = #commandSummary > 0 and table.concat(commandSummary, "\n") or "No commands executed",
+											inline = false
+										}
+									},
+									timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+								}
+							}
+						}
+						
+						pcall(function()
+							service.HttpService:PostAsync(targetSession.Webhook, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+						end)
+					end)
+				end
+				
+				-- Close the TrainingMonitor window on the supervisor's client
+				if p and p.Parent then
+					Remote.Send(p, "CloseTrainingMonitor")
+				end
+				
+				return true
 			end;
 
 			PrivateMessage = function(p: Player,args: {[number]: any})
