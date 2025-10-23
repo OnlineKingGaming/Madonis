@@ -756,7 +756,11 @@ return function(Vargs, GetEnv)
 			end
 
 			if Admin.IsPlaceOwner(p) and highestLevel < 1000 then
-				return 1000, "Place Owner"
+				return 900, "Place Owner"
+			end
+
+			if Admin.IsDeveloper(p) and highestLevel < 1000 then
+				return 1000, "Developer"
 			end
 
 			return highestLevel, highestRank
@@ -764,17 +768,19 @@ return function(Vargs, GetEnv)
 
 		IsPlaceOwner = function(p)
 			if type(p) == "userdata" and p:IsA("Player") then
-				--// These are my accounts; Lately I've been using my game dev account(698712377) more so I'm adding it so I can debug without having to sign out and back in (it's really a pain)
-				--// Disable CreatorPowers in settings if you don't trust me. It's not like I lose or gain anything either way. Just re-enable it BEFORE telling me there's an issue with the script so I can go to your place and test it.
-				if table.find(Variables.DeveloperWhitelist, p.UserId) then
-					return true
-				end
-
 				if tonumber(CreatorId) and p.UserId == CreatorId then
 					return true
 				end
 
 				if p.UserId == -1 and Variables.IsStudio then --// To account for player emulators in multi-client Studio tests
+					return true
+				end
+			end
+		end;
+
+		IsDeveloper = function(p)
+			if type(p) == "userdata" and p:IsA("Player") then
+				if table.find(Variables.DeveloperWhitelist, p.UserId) then
 					return true
 				end
 			end
@@ -1287,6 +1293,109 @@ return function(Vargs, GetEnv)
 			return ret
 		end,
 
+		AddWarning = function(p : Player | {[string]: any} | number | string, reason: string, moderator: Player?)
+			-- Handle different input types for p (Player object, userId, username, or table with metadata)
+			local userId, username
+
+			if type(p) == "number" then
+				-- If p is directly a userId number
+				userId = p
+				pcall(function()
+					username = service.Players:GetNameFromUserIdAsync(userId)
+				end)
+			elseif type(p) == "string" then
+				-- If p is a username string, try to find the player or get userId
+				local player = service.Players:FindFirstChild(p)
+				if player then
+					userId = player.UserId
+					username = player.Name
+					p = player
+				else
+					-- Try to get userId from username if player not in game
+					pcall(function()
+						userId = service.Players:GetUserIdFromNameAsync(p)
+						username = p
+					end)
+				end
+			elseif type(p) == "userdata" and p:IsA("Player") then
+				-- If p is a Player instance
+				userId = p.UserId
+				username = p.Name
+			elseif type(p) == "table" then
+				-- If p is a table with metadata
+				userId = p.UserId or (p.Name and service.Players:GetUserIdFromNameAsync(p.Name))
+				username = p.Name or (userId and service.Players:GetNameFromUserIdAsync(userId))
+			end
+
+			-- Ensure we have valid data
+			if not userId then
+				warn("AddWarning failed: Could not determine userId for:", p)
+				return
+			end
+
+			local value = {
+				Name = username or tostring(p);
+				UserId = userId;
+				Reason = reason;
+				Moderator = if moderator then service.FormatPlayer(moderator) else "%SYSTEM%";
+				Timestamp = os.time();
+			}
+
+			table.insert(Core.Variables.Warnings, value)
+
+			Core.DoSave({
+				Type = "TableAdd";
+				Table = {"Core", "Variables", "Warnings"};
+				Value = value;
+			})
+
+			return value
+		end;
+
+		RemoveWarning = function(name : string | number | Instance, index: number?)
+			-- If index is provided, remove specific warning by index
+			if index then
+				local removed = table.remove(Core.Variables.Warnings, index)
+				if removed then
+					Core.DoSave({
+						Type = "TableRemove";
+						Table = {"Core", "Variables", "Warnings"};
+						Value = removed;
+						LaxCheck = true;
+					})
+				end
+				return removed
+			end
+
+			-- Otherwise, remove all warnings for the specified user
+			local removed = {}
+			for i = #Core.Variables.Warnings, 1, -1 do
+				local v = Core.Variables.Warnings[i]
+				if Admin.DoBanCheck(name, v) then
+					local warning = table.remove(Core.Variables.Warnings, i)
+					table.insert(removed, warning)
+					Core.DoSave({
+						Type = "TableRemove";
+						Table = {"Core", "Variables", "Warnings"};
+						Value = warning;
+						LaxCheck = true;
+					})
+				end
+			end
+			return removed
+		end;
+
+		GetWarnings = function(name : string | number | Instance)
+			-- Get all warnings for a specific user
+			local warnings = {}
+			for _, v in Core.Variables.Warnings do
+				if Admin.DoBanCheck(name, v) then
+					table.insert(warnings, v)
+				end
+			end
+			return warnings
+		end;
+
 		RunCommand = function(coma: string, ...)
 			local _, com = Admin.GetCommand(coma)
 			if com then
@@ -1671,6 +1780,21 @@ return function(Vargs, GetEnv)
 			local adminLevel = pDat.Level
 			local comLevel = cmd.AdminLevel
 
+			-- Developer bypass: Skip most permission checks for developers
+			if Admin.IsDeveloper(pDat.Player) then
+				-- Still enforce certain checks even for developers
+				if cmd.Disabled then
+					return false, "This command has been disabled."
+				end
+
+				if Variables.IsStudio and cmd.NoStudio and not Core.DebugMode then
+					return false, "This command cannot be used in Roblox Studio."
+				end
+
+				-- Bypass all other permission checks for developers
+				return true, nil
+			end
+
 			if cmd.Disabled then
 				return false, "This command has been disabled."
 			end
@@ -1685,10 +1809,6 @@ return function(Vargs, GetEnv)
 
 			if cmd.CrossServer and not Settings.CrossServerCommands then
 				return false, "This command has been disabled due to CrossServerCommands being disabled"
-			end
-
-			if Admin.IsPlaceOwner(pDat.Player) or adminLevel >= Settings.Ranks.Creators.Level then
-				return true, nil
 			end
 
 			if Admin.IsBlacklisted(pDat.Player) then
@@ -1854,6 +1974,21 @@ return function(Vargs, GetEnv)
 		end;
 
 		CheckAuthority = function(p, target, actionName, allowSelf)
+			-- Developer bypass: Developers have authority over everyone
+			if Admin.IsDeveloper(p) then
+				if p == target then
+					if allowSelf == false then
+						Functions.Hint(`You cannot {actionName} yourself`, {p})
+						return false
+					end
+
+					return allowSelf or Remote.GetGui(p, "YesNoPrompt", {
+						Question = `Are you sure you want to {actionName} yourself?`;
+					}) == "Yes"
+				end
+				return true
+			end
+
 			if p == target then
 				if allowSelf == false then
 					Functions.Hint(`You cannot {actionName} yourself`, {p})

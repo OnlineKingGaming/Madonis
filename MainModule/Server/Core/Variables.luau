@@ -92,6 +92,7 @@ return function(Vargs, GetEnv)
 		BanMessage = "Madonis | You have been banned.",
 		PlayerJoinFilters = {};
 		LockMessage = "Madonis | This server has been locked",
+		Warnings = {},
 		DonorPass = {1348327, 1990427, 1911740, 167686, 98593, "6878510605", 5212082, 5212081}, --// Strings are items; numbers are gamepasses
 		WebPanel_Initiated = false,
 		DeveloperWhitelist = {2337916353},

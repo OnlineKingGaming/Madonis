@@ -9,6 +9,55 @@ return function(Vargs, env)
 	if env then setfenv(1, env) end
 
 	return {
+		ClearOldLogs = {
+			Prefix = Settings.Prefix;
+			Commands = {"clearoldlogs","flusholdlogs"};
+			Description = "Clears old logs";
+			AdminLevel = "Creators";
+			Function = function(plr: Player)
+				local ans = Remote.GetGui(plr, "YesNoPrompt", {
+					Question = `Are you sure you want to clear old logs (this will be saved in old logs)`;
+					Title = `Clear Old Logs`;
+					Icon = server.MatIcons.Info;
+					Size = {300, 200};
+				})
+				if ans == "Yes" then
+					Core.RemoveData("OldCommandLogs")
+					Functions.Hint("Old Logs Cleared (this will be saved in old logs)", {plr})
+				else
+					Functions.Hint("Operation cancelled", {plr})
+				end
+			end,
+		};
+
+		ClearPlayerData = {
+			Prefix = Settings.Prefix;
+			Commands = {"clearplayerdata", "clrplrdata", "clearplrdata", "clrplayerdata"};
+			Args = {"UserId"};
+			Description = "Clears PlayerData linked to the specified UserId";
+			AdminLevel = "Creators";
+			Function = function(plr: Player, args: {string})
+				local id = assert(tonumber(args[1]), "Must supply a valid UserId (argument #1)")
+				local username = select(2, xpcall(function()
+					return service.Players:GetNameFromUserIdAsync(id)
+				end, function() return "[Unknown User]" end))
+
+				local ans = Remote.GetGui(plr, "YesNoPrompt", {
+					Question = `Clearing all PlayerData for {username} will erase all warns, notes, bans, and other data associated with them, such as theme preference.\n Are you sure you want to erase {username}'s PlayerData? This action is irreversible.`;
+					Title = `Clear PlayerData for {username}?`;
+					Icon = server.MatIcons.Info;
+					Size = {300, 200};
+				})
+				if ans == "Yes" then
+					Core.RemoveData(tostring(id))
+					Core.PlayerData[tostring(id)] = nil
+					Functions.Notification("Notification", string.format("Cleared data for %s [%d].", username, id), {plr}, 10, "MatIcon://Delete")
+				else
+					Functions.Hint("Operation cancelled", {plr})
+				end
+			end
+		};
+
 		DirectBan = {
 			Prefix = Settings.Prefix;
 			Commands = {"directban"};
@@ -46,67 +95,6 @@ return function(Vargs, env)
 			end
 		};
 
-		UnDirectBan = {
-			Prefix = Settings.Prefix;
-			Commands = {"directunban", "undirectban"};
-			Args = {"username(s)"};
-			Description = "Removes the specified user(s) from the global ban list; saves";
-			AdminLevel = "Creators";
-			Hidden = true;
-			Function = function(plr: Player, args: {string}, data: {any})
-				for i in string.gmatch(assert(args[1], "Missing target username (argument #1)"), "[^,]+") do
-					local UserId = Functions.GetUserIdFromNameAsync(i)
-					if UserId then
-						Core.DoSave({
-							Type = "TableRemove";
-							Table = "Banned";
-							Value = `{i}:{UserId}`;
-						})
-
-						local getNameSuccess, actualName = pcall(service.Players.GetNameFromUserIdAsync, service.Players, UserId)
-						if getNameSuccess then
-							Core.DoSave({
-								Type = "TableRemove";
-								Table = "Banned";
-								Value = `{i}:{actualName}`;
-							})
-						end
-
-						Functions.Hint(`{if getNameSuccess then `@{actualName}` else `'{i}'`} has been unbanned from the game`, {plr})
-					else
-						Functions.Hint(`No user named '{i}' exists! (Please try again if you think this is an internal error)`, {plr})
-					end
-				end
-			end
-		};
-
-		GlobalPlace = {
-			Prefix = Settings.Prefix;
-			Commands = {"globalplace", "gplace", "globalforceplace"};
-			Args = {"placeId"};
-			Description = "Force all game-players to teleport to a desired place";
-			AdminLevel = "Creators";
-			CrossServerDenied = true;
-			IsCrossServer = true;
-			NoStudio = true;
-			Function = function(plr: Player, args: {string})
-				local placeId = assert(tonumber(args[1]), "Invalid/missing PlaceId (argument #2)")
-
-				local ans = Remote.GetGui(plr, "YesNoPrompt", {
-					Title = "Force-teleport all users?";
-					Icon = server.MatIcons.Warning;
-					Question = `Would you really like to force all game-players to teleport to place '{placeId}'?`;
-				})
-				if ans == "Yes" then
-					if not Core.CrossServer("NewRunCommand", {Name = plr.Name; UserId = plr.UserId, AdminLevel = Admin.GetLevel(plr)}, `{Settings.Prefix}forceplace all {placeId}`) then
-						error("CrossServer handler not ready; please try again later")
-					end
-				else
-					Functions.Hint("Operation cancelled", {plr})
-				end
-			end;
-		};
-
 		ForcePlace = {
 			Prefix = Settings.Prefix;
 			Commands = {"forceplace"};
@@ -132,100 +120,6 @@ return function(Vargs, env)
 				elseif not success then
 					error(fault)
 				end
-			end
-		};
-
-		Settings = {
-			Prefix = "";
-			Commands = {":adonissettings", `{Settings.Prefix}settings`, `{Settings.Prefix}adonissettings`};
-			Args = {};
-			Description = "Opens the Adonis settings management interface";
-			AdminLevel = "Creators";
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "UserPanel", {Tab = "Settings"})
-			end
-		};
-
-		MakeHeadAdmin = {
-			Prefix = Settings.Prefix;
-			Commands = {"headadmin", "owner", "hadmin", "oa"};
-			Args = {"player"};
-			Description = "Makes the target player(s) a HeadAdmin; Saves";
-			AdminLevel = "Creators";
-			Dangerous = true;
-			Function = function(plr: Player, args: {string}, data: {any})
-				local sendLevel = data.PlayerData.Level
-				for _, v in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
-					local targLevel = Admin.GetLevel(v)
-					if sendLevel > targLevel then
-						Admin.AddAdmin(v, "Team Member")
-						Functions.Notification("Notification", "You are a head admin. Click to view commands.", {v}, 10, "MatIcon://Shield", Core.Bytecode(`client.Remote.Send('ProcessCommand','{Settings.Prefix}cmds')`))
-						Functions.Hint(`{service.FormatPlayer(v)} is now a permanent head admin`, {plr})
-					else
-						Functions.Hint(`{service.FormatPlayer(v)} is already the same admin level as you or higher`, {plr})
-					end
-				end
-			end
-		};
-
-		TempHeadAdmin = {
-			Prefix = Settings.Prefix;
-			Commands = {"tempheadadmin", "tempowner", "toa", "thadmin"};
-			Args = {"player"};
-			Description = "Makes the target player(s) a temporary head admin; Does not save";
-			AdminLevel = "Creators";
-			Dangerous = true;
-			Function = function(plr: Player, args: {string}, data: {any})
-				local sendLevel = data.PlayerData.Level
-				for _, v in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
-					local targLevel = Admin.GetLevel(v)
-					if sendLevel > targLevel then
-						Admin.AddAdmin(v, "Team Member", true)
-						Functions.Notification("Notification", "You are a temp head admin. Click to view commands.", {v}, 10, "MatIcon://Shield", Core.Bytecode(`client.Remote.Send('ProcessCommand','{Settings.Prefix}cmds')`))
-						Functions.Hint(`{service.FormatPlayer(v)} is now a temporary head admin`, {plr})
-					else
-						Functions.Hint(`{service.FormatPlayer(v)} is already the same admin level as you or higher`, {plr})
-					end
-				end
-			end
-		};
-
-		Sudo = {
-			Prefix = Settings.Prefix;
-			Commands = {"sudo"};
-			Args = {"player", "command"};
-			Description = "Runs a command as the target player(s)";
-			AdminLevel = "Creators";
-			CrossServerDenied = true;
-			Function = function(plr: Player, args: {string})
-				assert(args[1], "Missing target player (argument #1)")
-				assert(args[2], "Missing command string (argument #2)")
-				for _, v in service.GetPlayers(plr, args[1]) do
-					task.defer(Process.Command, v, args[2], {isSystem = true})
-				end
-			end
-		};
-
-		CheckLink = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"checklink"};
-			Args = {};
-			Description = "Checks if the target player(s) have linked their game";
-			AdminLevel = "Creators";
-			CrossServerDenied = true;
-			Function = function(plr: Player, args: {string})
-				task.spawn(function()
-					if Admin.IsPlaceOwner(plr) then
-						local payload = {
-							["Type"] = "LinkGame";
-							["PlaceId"] = game.PlaceId;
-							["GameId"] = game.gameId;
-						["PlaceOwner"] = game.CreatorId;
-					}
-					Process.SendSocket(service.HttpService:JSONEncode(payload)) -- Send a message to the server
-				end
-			end)
-
 			end
 		};
 
@@ -259,62 +153,52 @@ return function(Vargs, env)
 			end
 		};
 
-		SirenController = {
+		GlobalPlace = {
 			Prefix = Settings.Prefix;
-			Commands = {"tsc", "tooglesirencontrol"};
-			Args = {};
-			Description = "Toggles the siren Controller";
+			Commands = {"globalplace", "gplace", "globalforceplace"};
+			Args = {"placeId"};
+			Description = "Force all game-players to teleport to a desired place";
 			AdminLevel = "Creators";
 			CrossServerDenied = true;
-			Hidden = true;
+			IsCrossServer = true;
+			NoStudio = true;
 			Function = function(plr: Player, args: {string})
-				local script = game.Workspace:FindFirstChild("EOWS 408 Tornado Siren"):FindFirstChild("Federal Signal EOWS 408"):FindFirstChild("SiraToneModelC/B4").Scripts.Main
-				if script and script.Disabled then
-					script.Disabled = false
-					Functions.Hint("Siren Controller Enabled", {plr})
-				else
-					script.Disabled = true
-					Functions.Hint("Siren Controller Disabled", {plr})
-				end
-			end
-		};
-
-
-		ClearPlayerData = {
-			Prefix = Settings.Prefix;
-			Commands = {"clearplayerdata", "clrplrdata", "clearplrdata", "clrplayerdata"};
-			Args = {"UserId"};
-			Description = "Clears PlayerData linked to the specified UserId";
-			AdminLevel = "Creators";
-			Function = function(plr: Player, args: {string})
-				local id = assert(tonumber(args[1]), "Must supply a valid UserId (argument #1)")
-				local username = select(2, xpcall(function()
-					return service.Players:GetNameFromUserIdAsync(id)
-				end, function() return "[Unknown User]" end))
+				local placeId = assert(tonumber(args[1]), "Invalid/missing PlaceId (argument #2)")
 
 				local ans = Remote.GetGui(plr, "YesNoPrompt", {
-					Question = `Clearing all PlayerData for {username} will erase all warns, notes, bans, and other data associated with them, such as theme preference.\n Are you sure you want to erase {username}'s PlayerData? This action is irreversible.`;
-					Title = `Clear PlayerData for {username}?`;
-					Icon = server.MatIcons.Info;
-					Size = {300, 200};
+					Title = "Force-teleport all users?";
+					Icon = server.MatIcons.Warning;
+					Question = `Would you really like to force all game-players to teleport to place '{placeId}'?`;
 				})
 				if ans == "Yes" then
-					Core.RemoveData(tostring(id))
-					Core.PlayerData[tostring(id)] = nil
-					Functions.Notification("Notification", string.format("Cleared data for %s [%d].", username, id), {plr}, 10, "MatIcon://Delete")
+					if not Core.CrossServer("NewRunCommand", {Name = plr.Name; UserId = plr.UserId, AdminLevel = Admin.GetLevel(plr)}, `{Settings.Prefix}forceplace all {placeId}`) then
+						error("CrossServer handler not ready; please try again later")
+					end
 				else
 					Functions.Hint("Operation cancelled", {plr})
 				end
-			end
+			end;
 		};
 
-		Terminal = {
-			Prefix = "";
-			Commands = {`{Settings.Prefix}terminal`, `{Settings.Prefix}console`, ":terminal", ":console"};
-			Description = "Opens the debug terminal";
+		MakeHeadAdmin = {
+			Prefix = Settings.Prefix;
+			Commands = {"headadmin", "owner", "hadmin", "oa"};
+			Args = {"player"};
+			Description = "Makes the target player(s) a HeadAdmin; Saves";
 			AdminLevel = "Creators";
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "Terminal")
+			Dangerous = true;
+			Function = function(plr: Player, args: {string}, data: {any})
+				local sendLevel = data.PlayerData.Level
+				for _, v in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
+					local targLevel = Admin.GetLevel(v)
+					if sendLevel > targLevel then
+						Admin.AddAdmin(v, "Team Member")
+						Functions.Notification("Notification", "You are a head admin. Click to view commands.", {v}, 10, "MatIcon://Shield", Core.Bytecode(`client.Remote.Send('ProcessCommand','{Settings.Prefix}cmds')`))
+						Functions.Hint(`{service.FormatPlayer(v)} is now a permanent head admin`, {plr})
+					else
+						Functions.Hint(`{service.FormatPlayer(v)} is already the same admin level as you or higher`, {plr})
+					end
+				end
 			end
 		};
 
@@ -383,37 +267,118 @@ return function(Vargs, env)
 			end,
 		};
 
-		ClearOldLogs = {
-			Prefix = Settings.Prefix;
-			Commands = {"clearoldlogs","flusholdlogs"};
-			Description = "Clears old logs";
-			AdminLevel = "Creators";
-			Function = function(plr: Player)
-				local ans = Remote.GetGui(plr, "YesNoPrompt", {
-					Question = `Are you sure you want to clear old logs (this will be saved in old logs)`;
-					Title = `Clear Old Logs`;
-					Icon = server.MatIcons.Info;
-					Size = {300, 200};
-				})
-				if ans == "Yes" then
-					Core.RemoveData("OldCommandLogs")
-					Functions.Hint("Old Logs Cleared (this will be saved in old logs)", {plr})
-				else
-					Functions.Hint("Operation cancelled", {plr})
-				end
-			end,
-		};
-
-		TaskManager = server.Data and server.Data.NightlyMode and { --// Unfinished
-			Prefix = Settings.Prefix;
-			Commands = {"taskmgr", "taskmanager"};
+		Settings = {
+			Prefix = "";
+			Commands = {":adonissettings", `{Settings.Prefix}settings`, `{Settings.Prefix}adonissettings`};
 			Args = {};
-			Description = "Task manager";
-			Hidden = true;
+			Description = "Opens the Adonis settings management interface";
 			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "TaskManager", {})
+				Remote.MakeGui(plr, "UserPanel", {Tab = "Settings"})
 			end
-		} or nil;
+		};
+
+		SirenController = {
+			Prefix = Settings.Prefix;
+			Commands = {"tsc", "tooglesirencontrol"};
+			Args = {};
+			Description = "Toggles the siren Controller";
+			AdminLevel = "Creators";
+			CrossServerDenied = true;
+			Hidden = true;
+			Function = function(plr: Player, args: {string})
+				local script = game.Workspace:FindFirstChild("EOWS 408 Tornado Siren"):FindFirstChild("Federal Signal EOWS 408"):FindFirstChild("SiraToneModelC/B4").Scripts.Main
+				if script and script.Disabled then
+					script.Disabled = false
+					Functions.Hint("Siren Controller Enabled", {plr})
+				else
+					script.Disabled = true
+					Functions.Hint("Siren Controller Disabled", {plr})
+				end
+			end
+		};
+
+		Sudo = {
+			Prefix = Settings.Prefix;
+			Commands = {"sudo"};
+			Args = {"player", "command"};
+			Description = "Runs a command as the target player(s)";
+			AdminLevel = "Creators";
+			CrossServerDenied = true;
+			Function = function(plr: Player, args: {string})
+				assert(args[1], "Missing target player (argument #1)")
+				assert(args[2], "Missing command string (argument #2)")
+				for _, v in service.GetPlayers(plr, args[1]) do
+					task.defer(Process.Command, v, args[2], {isSystem = true})
+				end
+			end
+		};
+
+		TempHeadAdmin = {
+			Prefix = Settings.Prefix;
+			Commands = {"tempheadadmin", "tempowner", "toa", "thadmin"};
+			Args = {"player"};
+			Description = "Makes the target player(s) a temporary head admin; Does not save";
+			AdminLevel = "Creators";
+			Dangerous = true;
+			Function = function(plr: Player, args: {string}, data: {any})
+				local sendLevel = data.PlayerData.Level
+				for _, v in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
+					local targLevel = Admin.GetLevel(v)
+					if sendLevel > targLevel then
+						Admin.AddAdmin(v, "Team Member", true)
+						Functions.Notification("Notification", "You are a temp head admin. Click to view commands.", {v}, 10, "MatIcon://Shield", Core.Bytecode(`client.Remote.Send('ProcessCommand','{Settings.Prefix}cmds')`))
+						Functions.Hint(`{service.FormatPlayer(v)} is now a temporary head admin`, {plr})
+					else
+						Functions.Hint(`{service.FormatPlayer(v)} is already the same admin level as you or higher`, {plr})
+					end
+				end
+			end
+		};
+
+		Terminal = {
+			Prefix = "";
+			Commands = {`{Settings.Prefix}terminal`, `{Settings.Prefix}console`, ":terminal", ":console"};
+			Description = "Opens the debug terminal";
+			AdminLevel = "Creators";
+			Function = function(plr: Player, args: {string})
+				Remote.MakeGui(plr, "Terminal")
+			end
+		};
+
+		UnDirectBan = {
+			Prefix = Settings.Prefix;
+			Commands = {"directunban", "undirectban"};
+			Args = {"username(s)"};
+			Description = "Removes the specified user(s) from the global ban list; saves";
+			AdminLevel = "Creators";
+			Hidden = true;
+			Function = function(plr: Player, args: {string}, data: {any})
+				for i in string.gmatch(assert(args[1], "Missing target username (argument #1)"), "[^,]+") do
+					local UserId = Functions.GetUserIdFromNameAsync(i)
+					if UserId then
+						Core.DoSave({
+							Type = "TableRemove";
+							Table = "Banned";
+							Value = `{i}:{UserId}`;
+						})
+
+						local getNameSuccess, actualName = pcall(service.Players.GetNameFromUserIdAsync, service.Players, UserId)
+						if getNameSuccess then
+							Core.DoSave({
+								Type = "TableRemove";
+								Table = "Banned";
+								Value = `{i}:{actualName}`;
+							})
+						end
+
+						Functions.Hint(`{if getNameSuccess then `@{actualName}` else `'{i}'`} has been unbanned from the game`, {plr})
+					else
+						Functions.Hint(`No user named '{i}' exists! (Please try again if you think this is an internal error)`, {plr})
+					end
+				end
+			end
+		};
+
 	}
 end

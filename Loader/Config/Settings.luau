@@ -303,7 +303,7 @@ settings.CommandCooldowns = {
 ]]
 }
 
-settings.FunCommands = true				-- Are fun commands enabled?
+settings.FunCommands = false				-- Are fun commands enabled?
 settings.PlayerCommands = true			-- Are player-level utility commands enabled?
 settings.AgeRestrictedCommands = true	-- Are age-locked commands enabled?
 settings.WarnDangerousCommand = false	-- Do dangerous commands ask for confirmation?

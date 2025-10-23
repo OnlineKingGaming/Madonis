@@ -6,10 +6,12 @@ return function(Vargs, GetEnv)
 	local server = Vargs.Server
 	local service = Vargs.Service
 	local PlaceName = game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId).Name
+	--[[OLD ROSOCKET - NOT USED ANYMORE
 	local RoSocket = require(server.Shared.RoSocket.RoSocket);
 	RoSocket.Startup()
 	task.wait(0.2)
 	local Success, Socket = pcall(RoSocket.Connect, "wss://madonis.globaldevelopment.xyz")
+	]]
 	local isShuttingDown = false
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
 	local Functions, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Settings, Defaults
@@ -313,6 +315,7 @@ return function(Vargs, GetEnv)
 		end
 	end
 
+	--[[OLD ROSOCKET - NOT USED ANYMORE
 	-- Helper to safely send on the socket with global throttle/cooldown
 	local lastSocketSend = 0
 	local socketCooldownUntil = 0
@@ -349,6 +352,7 @@ return function(Vargs, GetEnv)
 			return false
 		end
 	end
+	]]
 
 	server.Process = {
 		Init = Init;
@@ -365,12 +369,14 @@ return function(Vargs, GetEnv)
 			RateLog = 10;
 		};
 
+		--[[OLD ROSOCKET - NOT USED ANYMORE
 		SendSocket = function(message, force)
 			if Success and Socket then
 				return safeSocketSend(Socket, message, force)
 			end
 			return false
 		end;
+		]]
 
 		Remote = function(p, cliData, com, ...)
 			if p and p:IsA("Player") then
@@ -1018,6 +1024,7 @@ return function(Vargs, GetEnv)
 					Id = v.UserId;
 				})
 			end
+			--[[OLD ROSOCKET - NOT USED ANYMORE
 			local level, rank = Admin.GetLevel(p)
 			local payload = {
 				["Type"] = "Player Added";
@@ -1034,6 +1041,7 @@ return function(Vargs, GetEnv)
 				["launchData"] = p:GetJoinData().LaunchData;
 			}
 			safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Send a message to the server
+			]]
 			elseif ran and err ~= "REMOVED" then
 				Anti.RemovePlayer(p, ":: Madonis :: Loading Error [Missing player, keys, or removed]")
 			end
@@ -1053,6 +1061,7 @@ return function(Vargs, GetEnv)
 
 			isIngame[p] = false
 
+			--[[OLD ROSOCKET - NOT USED ANYMORE
 			task.spawn(function()
 				local playerList = {}
 
@@ -1076,6 +1085,7 @@ return function(Vargs, GetEnv)
 				}
 				safeSocketSend(Socket, service.HttpService:JSONEncode(payload), true) -- Send a message to the server
 			end)
+			]]
 
 			AddLog("Script", {
 				Text = string.format("Triggered PlayerRemoving for %s", p.Name);
@@ -1223,6 +1233,7 @@ return function(Vargs, GetEnv)
 			local level, rank = Admin.GetLevel(p)
 			local key = tostring(p.UserId)
 
+			--[[OLD ROSOCKET - NOT USED ANYMORE
 			task.spawn(function()
 				task.wait(5) -- Wait 5 seconds before sending the game link to ensure the player has fully loaded in
 				if Admin.IsPlaceOwner(p) then
@@ -1277,22 +1288,22 @@ return function(Vargs, GetEnv)
 								print("[Adonis][WebSocket] Invalid userId format for unban:", data.userId)
 								return
 							end
-							
+
 							local playerName = data.playerName or ("User " .. tostring(userId))
 							local unbanned = false
-							
+
 							print("[Adonis][WebSocket] Processing unban request for UserId:", userId, "Name:", playerName)
-							
+
 							-- Try to unban directly by userId first
 							local result = Admin.RemoveBan(userId, true)
 							if result then
 								Functions.LogAdminAction(nil, "Unban", playerName, "Webmaster Unbanned UserId " .. tostring(userId))
 								unbanned = true
 								print("[Adonis][WebSocket] Successfully unbanned UserId:", userId)
-								
+
 								-- Also attempt to remove any time bans
 								Admin.RemoveTimeBan(userId)
-								
+
 								-- Notify online admins
 								local adminPlrs = {}
 								for _, plr in ipairs(service.Players:GetPlayers()) do
@@ -1316,17 +1327,17 @@ return function(Vargs, GetEnv)
 								else
 									print("[Adonis][WebSocket] UserId was not found in ban list or not currently in game:", userId)
 								end
-								
+
 								-- Try to force unban through Roblox API as last resort
 								local config = {
 									UserIds = { userId },
 									ApplyToUniverse = true,
 								}
-								
+
 								local success, err = pcall(function()
 									return service.Players:UnbanAsync(config)
 								end)
-								
+
 								if success then
 									print("[Adonis][WebSocket] Successfully called Roblox UnbanAsync API for UserId:", userId)
 									unbanned = true
@@ -1335,7 +1346,7 @@ return function(Vargs, GetEnv)
 									print("[Adonis][WebSocket] Roblox UnbanAsync API failed:", err)
 								end
 							end
-							
+
 							-- Check if unban was successful
 							if unbanned then
 								print("[Adonis][WebSocket] Successfully processed unban for UserId:", userId)
@@ -1432,6 +1443,7 @@ return function(Vargs, GetEnv)
 		end)
 	end
 	initSocket()
+	]]
 			--// Fire player added
 			service.Events.PlayerAdded:Fire(p)
 			AddLog("Script", {
@@ -1747,6 +1759,7 @@ return function(Vargs, GetEnv)
 			service.Events.NetworkRemoved:Fire(cli)
 		end;
 
+		--[[OLD ROSOCKET - NOT USED ANYMORE
 		game:BindToClose(function()
 			isShuttingDown = true
 			local payload = {
@@ -1777,5 +1790,6 @@ return function(Vargs, GetEnv)
 
 			end)
 		end)
+		]]
 	};
 end
