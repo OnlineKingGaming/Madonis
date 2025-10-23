@@ -28,6 +28,7 @@ local CORE_LOADING_ORDER = table.freeze {
 	"HTTP";
 	"Anti";
 	"Commands";
+	"ShiftData";
 }
 
 --// Todo:

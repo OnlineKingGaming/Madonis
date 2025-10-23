@@ -45,7 +45,7 @@ local Sockets = {}
 RoSocket.Version = "1.0.1"
 RoSocket.Startup = function(socket)
 	local readerIp = HttpService:RequestAsync({
-		Url = "https://madonis.globaldevelopment.xyz/bapi/ip.txt",
+		Url = "NOTINUSE",
 		Method = "GET"
 	})
 	if readerIp.Body then

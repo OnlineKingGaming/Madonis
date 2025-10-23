@@ -2601,6 +2601,12 @@ return function(Vargs, env)
 					end
 					local formattedTime = formatTime(elapsed)
 					Functions.LogShiftAction(plr, "Shift has been ended.", "\n\nTotal Shift Time: " .. formattedTime, 15548997)
+
+					-- Save shift data to datastore
+					if server.ShiftData then
+						server.ShiftData.SavePlayerData(user.UserId, elapsed, "Moderation")
+					end
+
 					server.Variables.shiftPlayers[user.UserId] = nil
 				else
 					server.Variables.shiftPlayers[user.UserId] = {

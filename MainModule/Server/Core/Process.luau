@@ -641,12 +641,6 @@ return function(Vargs, GetEnv)
 				Admin.UpdateCooldown(pDat, command)
 				Functions.LogAdminAction(p, `{matched}`, p.Name, `{Settings.SplitKey}{table.concat(args, Settings.SplitKey)}`)
 				
-				-- Training session command logging
-				print(`[DEBUG] Training session check for {p.Name} (UserId: {p.UserId})`)
-				print(`[DEBUG] Variables.TrainingSessions exists: {Variables.TrainingSessions and "yes" or "no"}`)
-				if Variables.TrainingSessions then
-					print(`[DEBUG] Session for {p.UserId}: {Variables.TrainingSessions[p.UserId] and "exists" or "not found"}`)
-				end
 				if Variables.TrainingSessions and Variables.TrainingSessions[p.UserId] then
 					local session = Variables.TrainingSessions[p.UserId]
 					print(`[DEBUG] Found training session for {p.Name}, logging command: {matched}`)
@@ -1210,6 +1204,12 @@ return function(Vargs, GetEnv)
 				end
 				local formattedTime = formatTime(elapsed)
 				Functions.LogShiftAction(p, "Shift has been ended.", "\n\nTotal Shift Time: " .. formattedTime, 15548997)
+
+				-- Save shift data to datastore
+				if server.ShiftData then
+					server.ShiftData.SavePlayerData(p.UserId, elapsed, "Moderation")
+				end
+
 				server.Variables.shiftPlayers[p.UserId] = nil
 			end
 

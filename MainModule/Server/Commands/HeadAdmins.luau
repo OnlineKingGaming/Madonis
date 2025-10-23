@@ -2287,5 +2287,95 @@ return function(Vargs, env)
 			end
 		};
 
+		ViewShiftStats = {
+			Prefix = Settings.Prefix;
+			Commands = {"viewshiftstats", "shiftstats", "shiftdata"};
+			Args = {"player (optional)"};
+			Description = "View shift statistics for yourself or a target player. Shows total shifts, total time, average time, and last shift info.";
+			AdminLevel = "Leadership";
+			ListUpdater = function(plr: Player, targetUserId: number, targetName: string)
+				if not server.ShiftData then
+					return {}
+				end
+
+				local data = server.ShiftData.GetPlayerData(targetUserId)
+				local averageTime = server.ShiftData.GetAverageShiftTime(targetUserId)
+
+				if not data then
+					return {{
+						Text = "Unable to retrieve shift data";
+						Desc = "";
+					}}
+				end
+
+				return {
+					{
+						Text = `<b><font color='rgb(100, 200, 255)'>{targetName}</font></b>`;
+						Desc = "";
+					},
+					{
+						Text = "";
+						Desc = "";
+					},
+					{
+						Text = `<b>Total Shifts:</b> {data.TotalShifts}`;
+						Desc = `Completed {data.TotalShifts} shift{data.TotalShifts ~= 1 and "s" or ""}`;
+					},
+					{
+						Text = `<b>Total Time on Duty:</b> {server.ShiftData.FormatTime(data.TotalShiftTime)}`;
+						Desc = `{data.TotalShiftTime} seconds total`;
+					},
+					{
+						Text = `<b>Average Shift Duration:</b> {server.ShiftData.FormatTime(averageTime)}`;
+						Desc = `{averageTime} seconds average`;
+					},
+					{
+						Text = "";
+						Desc = "";
+					},
+					{
+						Text = `<b>Last Shift Type:</b> {data.LastShiftType}`;
+						Desc = data.LastShiftType;
+					},
+					{
+						Text = `<b>Last Shift Duration:</b> {server.ShiftData.FormatTime(data.LastShiftTime)}`;
+						Desc = `{data.LastShiftTime} seconds`;
+					},
+					{
+						Text = `<b>Last Shift Date:</b> {data.LastShiftDate}`;
+						Desc = data.LastShiftDate;
+					},
+				}
+			end;
+			Function = function(plr: Player, args: {string})
+				if not server.ShiftData then
+					Functions.Hint("Shift data system is not initialized", {plr})
+					return
+				end
+
+				-- If no argument provided, show own stats
+				if not args[1] or args[1] == "" or args[1] == "me" then
+					Remote.MakeGui(plr, "List", {
+						Title = `Shift Statistics - {plr.Name}`;
+						Table = Logs.ListUpdaters.ViewShiftStats(plr, plr.UserId, plr.Name);
+						TextSelectable = true;
+						RichText = true;
+						Sanitize = false;
+					})
+				else
+					-- Show stats for target player(s)
+					for _, targetPlayer in service.GetPlayers(plr, args[1]) do
+						Remote.MakeGui(plr, "List", {
+							Title = `Shift Statistics - {targetPlayer.Name}`;
+							Table = Logs.ListUpdaters.ViewShiftStats(plr, targetPlayer.UserId, targetPlayer.Name);
+							TextSelectable = true;
+							RichText = true;
+							Sanitize = false;
+						})
+					end
+				end
+			end
+		};
+
 	}
 end
