@@ -164,6 +164,33 @@ return function(Vargs, GetEnv)
 		return stats
 	end
 
+	--// Reset shift data for a player
+	local ResetPlayerData = function(userId: number)
+		if not ShiftDataStore then
+			warn("ShiftDataStore not initialized")
+			return false
+		end
+
+		local success, result = pcall(function()
+			ShiftDataStore:SetAsync(tostring(userId), {
+				TotalShiftTime = 0,
+				TotalShifts = 0,
+				LastShiftType = "None",
+				LastShiftTime = 0,
+				LastShiftDate = "Never",
+			})
+		end)
+
+		if success then
+			Logs:AddLog("ShiftData", "Successfully reset shift data for UserId: " .. tostring(userId))
+			return true
+		else
+			warn("Failed to reset shift data for UserId:", userId, "Error:", result)
+			Logs:AddLog("ShiftData", "Failed to reset shift data for UserId: " .. tostring(userId) .. " Error: " .. tostring(result))
+			return false
+		end
+	end
+
 	local ShiftData = {
 		Init = Init,
 		GetPlayerData = GetPlayerData,
@@ -171,6 +198,7 @@ return function(Vargs, GetEnv)
 		GetAverageShiftTime = GetAverageShiftTime,
 		FormatTime = FormatTime,
 		GetFormattedStats = GetFormattedStats,
+		ResetPlayerData = ResetPlayerData,
 	}
 
 	server.ShiftData = ShiftData

@@ -2294,8 +2294,8 @@ return function(Vargs, env)
 			Description = "View shift statistics for yourself or a target player. Shows total shifts, total time, average time, and last shift info.";
 			AdminLevel = "Leadership";
 			ListUpdater = function(plr: Player, targetUserId: number, targetName: string)
-				if not server.ShiftData then
-					return {}
+				if not server.ShiftData or not server.ShiftData.GetPlayerData then
+					return {{Text = "Shift data not initialized"; Desc = "DataStore may be disabled or unavailable"}}
 				end
 
 				local data = server.ShiftData.GetPlayerData(targetUserId)
@@ -2348,8 +2348,8 @@ return function(Vargs, env)
 				}
 			end;
 			Function = function(plr: Player, args: {string})
-				if not server.ShiftData then
-					Functions.Hint("Shift data system is not initialized", {plr})
+				if not server.ShiftData or not server.ShiftData.GetPlayerData then
+					Functions.Hint("Shift data not initialized. Enable API Services in Game Settings or check DataStore availability.", {plr})
 					return
 				end
 
@@ -2372,6 +2372,78 @@ return function(Vargs, env)
 							RichText = true;
 							Sanitize = false;
 						})
+					end
+				end
+			end
+		};
+
+		AllShiftStats = {
+			Prefix = Settings.Prefix;
+			Commands = {"allshiftstats", "allshiftdata"};
+			Args = {};
+			Description = "View shift statistics for all players who have shift data";
+			AdminLevel = "Leadership";
+			Function = function(plr: Player, args: {string})
+				if not server.ShiftData or not server.ShiftData.GetPlayerData then
+					Functions.Hint("Shift data not initialized. Enable API Services in Game Settings or check DataStore availability.", {plr})
+					return
+				end
+
+				local tab = {}
+				for _, player in service.Players:GetPlayers() do
+					local data = server.ShiftData.GetPlayerData(player.UserId)
+					if data and data.TotalShifts > 0 then
+						table.insert(tab, {
+							Text = `{player.Name}: {data.TotalShifts} shifts`;
+							Desc = `Total Time: {server.ShiftData.FormatTime(data.TotalShiftTime)} | Last: {data.LastShiftDate}`;
+						})
+					end
+				end
+
+				if #tab == 0 then
+					table.insert(tab, {Text = "No shift data found"; Desc = "No players have recorded shifts"})
+				end
+
+				Remote.MakeGui(plr, "List", {
+					Title = "All Shift Statistics";
+					Table = tab;
+					TextSelectable = true;
+				})
+			end
+		};
+
+		ResetShiftData = {
+			Prefix = Settings.Prefix;
+			Commands = {"resetshiftdata", "clearshiftdata"};
+			Args = {"player/all"};
+			Description = "Reset shift data for a specific player or all players. Use 'all' to reset everyone's data.";
+			AdminLevel = "Leadership";
+			Dangerous = true;
+			Function = function(plr: Player, args: {string})
+				if not server.ShiftData or not server.ShiftData.ResetPlayerData then
+					Functions.Hint("Shift data not initialized", {plr})
+					return
+				end
+
+				if args[1] and args[1]:lower() == "all" then
+					if Remote.GetGui(plr, "YesNoPrompt", {Question = "Reset ALL shift data? This cannot be undone!"; Title = "Confirm Reset"}) == "Yes" then
+						local count = 0
+						for _, player in service.Players:GetPlayers() do
+							if server.ShiftData.ResetPlayerData(player.UserId) then
+								count += 1
+							end
+						end
+						Functions.Hint(`Reset shift data for {count} player(s)`, {plr})
+						Functions.LogAdminAction(plr, "Reset All Shift Data", "All Players", `Reset {count} player records`)
+					end
+				else
+					for _, targetPlayer in service.GetPlayers(plr, args[1]) do
+						if server.ShiftData.ResetPlayerData(targetPlayer.UserId) then
+							Functions.Hint(`Reset shift data for {service.FormatPlayer(targetPlayer)}`, {plr})
+							Functions.LogAdminAction(plr, "Reset Shift Data", targetPlayer.Name, "Shift data reset")
+						else
+							Functions.Hint(`Failed to reset shift data for {service.FormatPlayer(targetPlayer)}`, {plr})
+						end
 					end
 				end
 			end
