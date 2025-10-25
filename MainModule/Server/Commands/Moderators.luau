@@ -433,170 +433,180 @@ return function(Vargs, env)
 			end
 		};
 
-		CaseHelp = {
-			Prefix = Settings.Prefix;
-			Commands = {"casehelp", "chelp"};
-			Args = {};
-			Description = "Shows help information for the case management system";
-			AdminLevel = "Moderators";
-			Function = function(plr: Player, args: {string})
-				local tab = {
-					"# Case Management System Help",
-					"―――――――――――――――――――――――――――――――――――",
-					"",
-					"## Available Commands:",
-					":cases - View all active cases with instructions",
-					":mycases - View cases you've claimed",
-					":q <partial name> - Quick claim using partial name",
-					":claim <username> - Claim using full/partial username",
-					":close <partial name> - Close case using partial name",
-					":unclaim <username> - Close using full/partial username",
-					":casestats - View case statistics (HeadAdmins)",
-					"",
-					"## Quick Examples:",
-					":q mad    → Claims case for 'Madonis' (if only match)",
-					":claim john → Claims any case with 'john' in name",
-					":close test → Closes case for 'TestPlayer'",
-					"",
-					"## How Partial Names Work:",
-					"• Searches usernames and display names",
-					"• Case insensitive matching",
-					"• Shows list if multiple matches found",
-					"• Auto-claims if only one match",
-					"",
-					"## Case Status Colors:",
-					"• White text = [UNCLAIMED] - Available to claim",
-					"• Green text = [CLAIMED by Username] - Taken",
-					"",
-					"## Important Notes:",
-					"• Only the claiming moderator can close their cases",
-					"• Claiming automatically starts tracking the player",
-					"• Cases are removed when closed (not just unclaimed)",
-					"• Use exact names when multiple matches appear"
-				}
-				
-				Remote.MakeGui(plr, "List", {Title = "Case System Help", Tab = tab})
-			end
-		};
+-- Unified Cases Command - Replace CaseHelp, CaseList, CaseTest, and MyCases with this
 
-		CaseList = {
-			Prefix = Settings.Prefix;
-			Commands = {"cases", "clist", "caselist"};
-			Args = {"autoupdate? (default: true)"};
-			Description = "Shows a list of all active cases";
-			AdminLevel = "Moderators";
-			ListUpdater = function(plr: Player)
-				local Cases = Variables.HelpRequests or {}
-				local tab = {}
-				local count = 0
-				
-				-- Helper function to format timestamp
-				local function formatTime(timestamp: number): string
-					local dateTable = os.date("*t", timestamp)
-					return string.format("%02d/%02d/%04d %02d:%02d:%02d", 
-						dateTable.month, dateTable.day, dateTable.year,
-						dateTable.hour, dateTable.min, dateTable.sec)
-				end
-				
-				-- Build case list
-				for username, caseData in pairs(Cases) do
-					if caseData and caseData.Pending and caseData.isIngame then
-						count += 1
-						local timeStr = formatTime(caseData.Time)
-						local reasonStr = caseData.Reason or "No reason provided"
-						local claimedBy = caseData.ClaimedBy
-						local status = claimedBy and `[CLAIMED by {claimedBy}]` or "[UNCLAIMED]"
-						
-						table.insert(tab, {
-							Text = `Case #{count}: {username} {status}`,
-							Desc = `Created: {timeStr} | Reason: {reasonStr} | Click to claim/unclaim`,
-							Color = claimedBy and Color3.new(0, 0.8, 0) or nil, -- Green if claimed
-							OnClick = Core.Bytecode(string.format([[
-								-- Use claim/unclaim command directly
-								client.Remote.Send('ProcessCommand','%s%s %s')
-							]], Settings.Prefix[1], claimedBy and "unclaim" or "claim", username))
-						})
-					end
-				end
-				
-				-- Add header information
-				if count > 0 then
-					table.insert(tab, 1, `# Active Cases: {count}`)
-					table.insert(tab, 2, "―――――――――――――――――――――――")
-					table.insert(tab, 3, "💡 To claim: ;q <partial name> or ;claim <username>")
-					table.insert(tab, 4, "💡 To close: ;close <partial name> or ;unclaim <username>")
-					table.insert(tab, 5, "―――――――――――――――――――――――")
-				else
-					table.insert(tab, "No active cases found.")
-					table.insert(tab, "")
-					table.insert(tab, "ℹ️ Cases appear when players use !help")
-					table.insert(tab, "ℹ️ Use ;casetest to check system status")
-				end
-				
-				return tab
-			end;
-			Function = function(plr: Player, args: {string})
-				-- Debug: Check if Variables exists
-				if not Variables then
-					return Functions.Hint("Error: Variables not available", {plr})
-				end
-				
-				Remote.MakeGui(plr, "List", {
-					Title = "Case List";
-					Tab = Logs.ListUpdaters.CaseList(plr);
-					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 5 else nil;
-					Update = "CaseList";
-				})
+	Claim = {
+		Prefix = Settings.Prefix;
+		Commands = {"claim", "q"};
+		Args = {"player"};
+		Description = "Claim a help case";
+		AdminLevel = "Moderators";
+		Function = function(plr: Player, args: {string})
+			if not Variables or not Variables.HelpRequests then
+				return Functions.Hint("Error: Help system not available", {plr})
 			end
-		};
 
-		CaseTest = {
-			Prefix = Settings.Prefix;
-			Commands = {"casetest", "testcase"};
-			Args = {};
-			Description = "Tests if the case system is working";
-			AdminLevel = "Moderators";
-			Function = function(plr: Player, args: {string})
-				local status = {}
-				
-				-- Test Variables access
-				if Variables then
-					table.insert(status, "✅ Variables accessible")
-					if Variables.HelpRequests then
-						table.insert(status, "✅ HelpRequests table exists")
-						local count = 0
-						for _ in pairs(Variables.HelpRequests) do count += 1 end
-						table.insert(status, `📊 Active cases: {count}`)
-					else
-						table.insert(status, "❌ HelpRequests table missing")
+			local targetName = args[1]
+			if not targetName then
+				return Functions.Hint("Usage: ;claim <username>", {plr})
+			end
+
+			-- Find matching case (support partial names)
+			local matchedCase = nil
+			for username, caseData in pairs(Variables.HelpRequests) do
+				if caseData and caseData.Pending and caseData.isIngame then
+					if username:lower():find(targetName:lower(), 1, true) then
+						matchedCase = username
+						break
 					end
-				else
-					table.insert(status, "❌ Variables not accessible")
 				end
-				
-				-- Test Commands access
-				if Commands then
-					table.insert(status, "✅ Commands accessible")
-					if Commands.Track then
-						table.insert(status, "✅ Track command available")
-					else
-						table.insert(status, "❌ Track command missing")
+			end
+
+			if not matchedCase then
+				return Functions.Hint("No active case found for: " .. targetName, {plr})
+			end
+
+			local caseData = Variables.HelpRequests[matchedCase]
+
+			-- Check if already claimed
+			if caseData.ClaimedBy then
+				return Functions.Hint(`Case for {matchedCase} is already claimed by {caseData.ClaimedBy}`, {plr})
+			end
+
+			-- Claim the case
+			caseData.ClaimedBy = plr.Name
+			caseData.ClaimedTime = os.time()
+
+			-- Log the action
+			if Functions.LogCaseAction then
+				Functions.LogCaseAction(plr, "CLAIM", matchedCase, `Moderator {plr.Name} claimed case`)
+			end
+
+			-- Start tracking the player
+			local target = service.Players:FindFirstChild(matchedCase)
+			if target then
+				Commands.Track.Function(plr, {target.Name})
+				Functions.Hint(`A moderator ({plr.Name}) is now helping you with your request!`, {target})
+			end
+
+			Functions.Hint(`Claimed case for {matchedCase} and started tracking`, {plr})
+		end
+	};
+
+	Unclaim = {
+		Prefix = Settings.Prefix;
+		Commands = {"unclaim"};
+		Args = {"player"};
+		Description = "Unclaim a help case (allows another moderator to claim it)";
+		AdminLevel = "Moderators";
+		Function = function(plr: Player, args: {string})
+			if not Variables or not Variables.HelpRequests then
+				return Functions.Hint("Error: Help system not available", {plr})
+			end
+
+			local targetName = args[1]
+			if not targetName then
+				return Functions.Hint("Usage: ;unclaim <username>", {plr})
+			end
+
+			local matchedCase = nil
+			for username, caseData in pairs(Variables.HelpRequests) do
+				if caseData and caseData.Pending and caseData.isIngame then
+					if username:lower():find(targetName:lower(), 1, true) then
+						matchedCase = username
+						break
 					end
-				else
-					table.insert(status, "❌ Commands not accessible")
 				end
-				
-				-- Test Functions
-				if Functions then
-					table.insert(status, "✅ Functions accessible")
-				else
-					table.insert(status, "❌ Functions not accessible")
+			end
+
+			if not matchedCase then
+				return Functions.Hint("No active case found for: " .. targetName, {plr})
+			end
+
+			local caseData = Variables.HelpRequests[matchedCase]
+
+			if caseData.ClaimedBy and caseData.ClaimedBy ~= plr.Name then
+				return Functions.Hint(`Case for {matchedCase} is claimed by {caseData.ClaimedBy}, not you`, {plr})
+			end
+
+			caseData.ClaimedBy = nil
+			caseData.ClaimedTime = nil
+
+			Functions.Hint(`Unclaimed case for {matchedCase}`, {plr})
+		end
+	};
+
+	CloseCase = {
+		Prefix = Settings.Prefix;
+		Commands = {"close", "closecase"};
+		Args = {"player"};
+		Description = "Close a help case permanently";
+		AdminLevel = "Moderators";
+		Function = function(plr: Player, args: {string})
+			if not Variables or not Variables.HelpRequests then
+				return Functions.Hint("Error: Help system not available", {plr})
+			end
+
+			local targetName = args[1]
+			if not targetName then
+				return Functions.Hint("Usage: ;close <username>", {plr})
+			end
+
+			local matchedCase = nil
+			for username, caseData in pairs(Variables.HelpRequests) do
+				if caseData and caseData.Pending and caseData.isIngame then
+					if username:lower():find(targetName:lower(), 1, true) then
+						matchedCase = username
+						break
+					end
 				end
-				
-			table.insert(status, 1, "# Case System Status")
-			table.insert(status, 2, "―――――――――――――――――――――――")
-			
-			Remote.MakeGui(plr, "List", {Title = "Case System Test", Tab = status})
+			end
+
+			if not matchedCase then
+				return Functions.Hint("No active case found for: " .. targetName, {plr})
+			end
+
+			local caseData = Variables.HelpRequests[matchedCase]
+
+			if caseData.ClaimedBy and caseData.ClaimedBy ~= plr.Name then
+				return Functions.Hint(`Case for {matchedCase} is claimed by {caseData.ClaimedBy}, not you`, {plr})
+			end
+
+			if Functions.LogCaseAction then
+				Functions.LogCaseAction(plr, "CLOSE", matchedCase, `Moderator {plr.Name} closed case`)
+			end
+
+			local target = service.Players:FindFirstChild(matchedCase)
+			if target then
+				Functions.Hint(`Your help request has been closed by {plr.Name}. Thank you!`, {target})
+			end
+
+			Variables.HelpRequests[matchedCase] = nil
+
+			Functions.Hint(`Closed case for {matchedCase}`, {plr})
+		end
+	};
+
+	Cases = {
+		Prefix = Settings.Prefix;
+		Commands = {"cases", "case"};
+		Args = {"view (all/mine/stats/help) - default: all"};
+		Description = "Unified case management system - View and manage help cases";
+		AdminLevel = "Moderators";
+		Function = function(plr: Player, args: {string})
+			-- Check if Variables exists
+			if not Variables then
+				return Functions.Hint("Error: Variables not available", {plr})
+			end
+
+			-- Get all active cases
+			local Cases = Variables.HelpRequests or {}
+
+			-- Send to window UI
+			Remote.MakeGui(plr, "Cases", {
+				Cases = Cases;
+				CmdPrefix = Settings.Prefix[1];
+			})
 		end
 	};
 
@@ -2815,74 +2825,6 @@ return function(Vargs, env)
 			end
 		};
 
-		MyCases = {
-			Prefix = Settings.Prefix;
-			Commands = {"mycases", "myc"};
-			Args = {"autoupdate? (default: true)"};
-			Description = "Shows cases claimed by you";
-			AdminLevel = "Moderators";
-			ListUpdater = function(plr: Player)
-				local Cases = Variables.HelpRequests
-				local tab = {}
-				local count = 0
-				
-				-- Helper function to format timestamp
-				local function formatTime(timestamp: number): string
-					local dateTable = os.date("*t", timestamp)
-					return string.format("%02d/%02d/%04d %02d:%02d:%02d", 
-						dateTable.month, dateTable.day, dateTable.year,
-						dateTable.hour, dateTable.min, dateTable.sec)
-				end
-				
-				-- Build list of cases claimed by this moderator
-				for username, caseData in pairs(Cases) do
-					if caseData and caseData.Pending and caseData.isIngame and caseData.ClaimedBy == plr.Name then
-						count += 1
-						local timeStr = formatTime(caseData.Time)
-						local claimedTimeStr = formatTime(caseData.ClaimedTime)
-						local reasonStr = caseData.Reason or "No reason provided"
-						
-						table.insert(tab, {
-							Text = `{username}`,
-							Desc = `Created: {timeStr} | Claimed: {claimedTimeStr} | Reason: {reasonStr}`,
-							Color = Color3.new(0, 0.8, 0), -- Green for claimed cases
-							OnClick = Core.Bytecode(string.format([[
-								-- Close this case
-								local caseName = "%s"
-								local moderatorName = "%s"
-								local Cases = Variables.HelpRequests
-								
-								-- Log before closing
-								Functions.LogCaseAction(service.Players:FindFirstChild(moderatorName), "CLOSE", caseName, string.format("Moderator %s closed case for player %s via MyCases interface", moderatorName, caseName))
-								
-								Cases[caseName] = nil
-								Functions.Hint("Case for " .. caseName .. " has been closed.", {service.Players:FindFirstChild(moderatorName)})
-							]], username, plr.Name))
-						})
-					end
-				end
-				
-				-- Add header information
-				if count > 0 then
-					table.insert(tab, 1, `# My Active Cases: {count}`)
-					table.insert(tab, 2, "―――――――――――――――――――――――")
-					table.insert(tab, 3, "Click on a case to close it")
-					table.insert(tab, 4, "―――――――――――――――――――――――")
-				else
-					table.insert(tab, "You have no claimed cases.")
-				end
-				
-				return tab
-			end;
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "List", {
-					Title = "My Cases";
-					Tab = Logs.ListUpdaters.MyCases(plr);
-					AutoUpdate = if not args[1] or (args[1]:lower() == "true" or args[1]:lower() == "yes") then 5 else nil;
-					Update = "MyCases";
-				})
-			end
-		};
 
 		NoClip = {
 			Prefix = Settings.Prefix;
@@ -5339,8 +5281,10 @@ return function(Vargs, env)
 			Description = "Shows you where the target player(s) is/are",
 			AdminLevel = "Moderators",
 			Function = function(plr: Player, args: { string })
-				local plrChar = assert(plr.Character, "You don't have a character")
-				local plrHum = assert(plrChar:FindFirstChildOfClass("Humanoid"), "You don't have a humanoid")
+				local plrChar = plr.Character
+				assert(plrChar, "You don't have a character")
+				local plrHum = plrChar:FindFirstChildOfClass("Humanoid")
+				assert(plrHum, "You don't have a humanoid")
 
 				-- Always persistent
 				if type(Variables.TrackingTable[plr.Name]) ~= "table" then

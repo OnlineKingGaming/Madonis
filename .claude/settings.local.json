@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"D:\\Madonis\\Adonis Scripting\" -type f ( -name \"*.luau\" -o -name \"*.lua\" ) -exec grep -l \"Commands.*claim\\|claim.*Commands\" {} ;)",
+      "Bash(find \"D:\\Madonis\\Adonis Scripting\\MainModule\\Client\" -type f ( -name \"*.luau\" -o -name \"*.lua\" ) -exec grep -l \"case\\|Case\\|CASE\" {} ;)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

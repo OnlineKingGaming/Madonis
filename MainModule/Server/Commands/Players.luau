@@ -407,7 +407,7 @@ Paint = {
 											Time = 30;
 											OnClick = Core.Bytecode(string.format([[
 												-- Use claim command directly
-												client.Remote.Send('ProcessCommand','%sclaim %s')
+												client.Remote.Send('ProcessCommand','%scases')
 												return true
 											]], Settings.Prefix[1], plr.Name));
 											OnIgnore = Core.Bytecode("return false");

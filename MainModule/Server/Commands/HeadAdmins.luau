@@ -381,52 +381,6 @@ return function(Vargs, env)
 			end
 		};
 
-		CaseStats = {
-			Prefix = Settings.Prefix;
-			Commands = {"casestats", "cstats"};
-			Args = {};
-			Description = "Shows case statistics and moderator activity";
-			AdminLevel = "HeadAdmins";
-			Function = function(plr: Player, args: {string})
-				local Cases = Variables.HelpRequests
-				local tab = {}
-				local totalCases = 0
-				local claimedCases = 0
-				local moderatorStats = {}
-				
-				-- Analyze cases
-				for username, caseData in pairs(Cases) do
-					if caseData and caseData.Pending and caseData.isIngame then
-						totalCases += 1
-						if caseData.ClaimedBy then
-							claimedCases += 1
-							moderatorStats[caseData.ClaimedBy] = (moderatorStats[caseData.ClaimedBy] or 0) + 1
-						end
-					end
-				end
-				
-				-- Add summary
-				table.insert(tab, `# Case Statistics`)
-				table.insert(tab, "―――――――――――――――――――――――")
-				table.insert(tab, `Total Active Cases: {totalCases}`)
-				table.insert(tab, `Claimed Cases: {claimedCases}`)
-				table.insert(tab, `Unclaimed Cases: {totalCases - claimedCases}`)
-				table.insert(tab, "")
-				
-				-- Add moderator breakdown
-				if next(moderatorStats) then
-					table.insert(tab, "# Moderator Activity:")
-					table.insert(tab, "―――――――――――――――――――――――")
-					for modName, count in pairs(moderatorStats) do
-						table.insert(tab, `{modName}: {count} case(s)`)
-					end
-				else
-					table.insert(tab, "No moderators currently handling cases.")
-				end
-				
-				Remote.MakeGui(plr, "List", {Title = "Case Statistics", Tab = tab})
-			end
-		};
 
 		Change = {
 			Prefix = Settings.Prefix;
