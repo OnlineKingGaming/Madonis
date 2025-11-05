@@ -38,36 +38,6 @@ return function(Vargs, env)
 			end
 		};
 
-		AddToStat = {
-			Prefix = Settings.Prefix;
-			Commands = {"add", "addtostat", "addstat"};
-			Args = {"player", "stat", "value"};
-			Description = "Add <value> to <stat>";
-			AdminLevel = "Leadership";
-			Function = function(plr: Player, args: {string})
-				local statName = assert(args[2], "Missing stat name (argument #2)")
-				local valueToAdd = assert(tonumber(args[3]), "Missing/invalid numerical value to add (argument #3)")
-				for _, v in service.GetPlayers(plr, args[1]) do
-					local leaderstats = v:FindFirstChild("leaderstats")
-					if leaderstats then
-						leaderstats.Name = "leaderstats"
-						local absoluteMatch = leaderstats:FindFirstChild(statName)
-						if absoluteMatch and (absoluteMatch:IsA("IntValue") or absoluteMatch:IsA("NumberValue")) then
-							absoluteMatch.Value += valueToAdd
-						else
-							for _, st in leaderstats:GetChildren() do
-								if (st:IsA("IntValue") or st:IsA("NumberValue")) and string.match(st.Name:lower(), `^{service.SanitizePattern(statName:lower())}`) then
-									st.Value += valueToAdd
-								end
-							end
-						end
-					else
-						Functions.Hint(`{service.FormatPlayer(v)} doesn't have a leaderstats folder`, {plr})
-					end
-				end
-			end
-		};
-
 		Admin = {
 			Prefix = Settings.Prefix;
 			Commands = {"permadmin", "padmin", "admin"};
@@ -311,33 +281,6 @@ return function(Vargs, env)
 			end
 		};
 
-		Bots = {
-			Prefix = Settings.Prefix;
-			Commands = {"bot", "trainingbot"};
-			Args = {"player", "num (max: 50)", "walk", "attack", "friendly", "health", "speed", "damage"};
-			Description = "AI bots made for training; ':bot scel 5 true true'";
-			AdminLevel = "Team Member";
-			Function = function(plr: Player, args: {string})
-				local num = tonumber(args[2]) and math.clamp(tonumber(args[2]), 1, 50) or 1
-				local health = tonumber(args[6]) or 100
-				local speed = tonumber(args[7]) or 16
-				local damage = tonumber(args[8]) or 5
-				local attack = args[4] == "true" and true or false
-				local friendly = args[5] == "true" and true or false
-				local walk
-
-				if args[3] == "false" then
-					walk = false
-				else
-					walk = true
-				end
-
-				for _, v in service.GetPlayers(plr, args[1]) do
-					Functions.makeRobot(v, num, health, speed, damage, walk, attack, friendly)
-				end
-			end
-		};
-
 		Cape = {
 			Prefix = Settings.Prefix;
 			Commands = {"cape", "givecape"};
@@ -381,35 +324,6 @@ return function(Vargs, env)
 			end
 		};
 
-
-		Change = {
-			Prefix = Settings.Prefix;
-			Commands = {"change", "leaderstat", "stat", "changestat"};
-			Args = {"player", "stat", "value"};
-			Filter = true;
-			Description = "Change the target player(s)'s leaderstat <stat> value to <value>";
-			AdminLevel = "Leadership";
-			Function = function(plr: Player, args: {string})
-				local statName = assert(args[2], "Missing stat name (argument #2)")
-				for _, v in service.GetPlayers(plr, args[1]) do
-					local leaderstats = v:FindFirstChild("leaderstats")
-					if leaderstats then
-						local absolute = leaderstats:FindFirstChild(statName)
-						if absolute and absolute:IsA("ValueBase") then
-							absolute.Value = (absolute:IsA("IntValue") or absolute:IsA("NumberValue")) and tonumber(args[3]) or args[3]
-						else
-							for _, st in leaderstats:GetChildren() do
-								if st:IsA("ValueBase") and string.match(st.Name:lower(), `^{service.SanitizePattern(statName:lower())}`) then
-									st.Value = (st:IsA("IntValue") or st:IsA("NumberValue")) and tonumber(args[3]) or args[3]
-								end
-							end
-						end
-					else
-						Functions.Hint(`{service.FormatPlayer(v)} doesn't have a leaderstats folder`, {plr})
-					end
-				end
-			end
-		};
 
 		Change = {
 			Prefix = Settings.Prefix;

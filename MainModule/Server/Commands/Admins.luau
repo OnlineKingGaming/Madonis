@@ -106,50 +106,87 @@ return function(Vargs, env)
 			end
 		};
 
-		CustomKick = {
-			Prefix = Settings.Prefix;
-			Commands = {"ckick", "customkick", "customcrash"};
-			Args = {"player", "title", "message"};
-			Description = "Disconnects (crashes) the target player with a custom Roblox dialog";
-			AdminLevel = "Admins";
-			Function = function(plr: Player, args: {string})
-				assert(args[3], "Argument(s) missing or nil")
-
-				local title = service.BroadcastFilter(args[2], plr)
-				assert(title == args[2], "Title was filtered: "..title)
-
-				local msg = service.BroadcastFilter(args[3], plr)
-				assert(msg == args[3], "Message was filtered: "..msg)
-
-				for _, v in service.GetPlayers(plr, args[1], {IsKicking = true}) do
-					if not Admin.CheckAuthority(plr, v, "custom-kick") then
-						continue
-					end
-
-					local plrgui = v:FindFirstChildOfClass("PlayerGui")
-					if not plrgui then
-						Remote.MakeGui(plr, "Output", {
-							Message = `Failed to custom-kick {service.FormatPlayer(v)} (PlayerGui not found)`;
-						})
-						continue
-					end
-
-					local promptGui = Deps.Assets.RobloxPromptGui:Clone()
-					promptGui.promptOverlay.ErrorPrompt.TitleFrame.ErrorTitle.Text = title
-					promptGui.promptOverlay.ErrorPrompt.MessageArea.ErrorFrame.ErrorMessage.Text = msg
-					promptGui.Parent = plrgui
-
-					Remote.Send(v, "Function", "CustomKick")
-					task.delay(5, function()
-						if v.Parent == service.Players then
-							-- make sure they're really kicked
-							v:Kick("Unexpected Error")
-						end
-					end)
-					Functions.Hint(`Custom-kicking {service.FormatPlayer(v)}`, {plr})
-				end
+CustomKick = {
+    Prefix = Settings.Prefix;
+    Commands = {"ckick", "customkick", "customcrash"};
+    Args = {"player", "title", "message"};
+    Description = "Disconnects (crashes) the target player with a custom Roblox dialog";
+    AdminLevel = "Admins";
+    Function = function(plr: Player, args: {string})
+        assert(args[2] and args[3], "Argument(s) missing or nil")
+        
+        -- Parse title - allow quotes for multi-word titles
+        local rawTitle = args[2]
+        local titleStart = 2
+        
+        -- Check if title starts with a quote
+        if rawTitle:match('^"') or rawTitle:match("^'") then
+            -- Find the closing quote
+            local quoteChar = rawTitle:sub(1, 1)
+            local titleEnd = 2
+            
+            -- Search through args to find closing quote
+            for i = 2, #args do
+                local combined = table.concat({select(2, table.unpack(args))}, " ", 1, i - 1)
+                if combined:match(quoteChar .. "$") then
+                    titleEnd = i
+                    break
+                end
+            end
+            
+            -- Extract title from quoted args
+            rawTitle = table.concat({select(2, table.unpack(args))}, " ", 1, titleEnd - 1)
+            titleStart = titleEnd + 1
+        end
+        
+        -- Remove quotes from title
+        rawTitle = rawTitle:gsub('"', ""):gsub("'", "")
+        
+        -- Parse message - everything after title
+        local rawMsg = table.concat({select(titleStart, table.unpack(args))}, " ")
+        
+        -- Remove quotes from message
+        rawMsg = rawMsg:gsub('"', ""):gsub("'", "")
+        
+        -- Convert newline escapes
+        rawTitle = rawTitle:gsub("\\n", "\n")
+        rawMsg = rawMsg:gsub("\\n", "\n")
+        
+        -- Filter content
+        local title = service.BroadcastFilter(rawTitle, plr)
+        assert(title == rawTitle, "Title was filtered: " .. title)
+        
+        local msg = service.BroadcastFilter(rawMsg, plr)
+        assert(msg == rawMsg, "Message was filtered: " .. msg)
+        
+		for _, v in service.GetPlayers(plr, args[1], {IsKicking = true}) do
+			if not Admin.CheckAuthority(plr, v, "custom-kick") then
+				continue
 			end
-		};
+			local plrgui = v:FindFirstChildOfClass("PlayerGui")
+			if not plrgui then
+				Remote.MakeGui(plr, "Output", {
+					Message = `Failed to custom-kick {service.FormatPlayer(v)} (PlayerGui not found)`;
+				})
+				continue
+			end
+			local promptGui = Deps.Assets.RobloxPromptGui:Clone()
+			promptGui.promptOverlay.ErrorPrompt.TitleFrame.ErrorTitle.Text = title
+			promptGui.promptOverlay.ErrorPrompt.MessageArea.ErrorFrame.ErrorMessage.Text = msg
+			promptGui.promptOverlay.ErrorPrompt.MessageArea.ErrorFrame.ErrorMessage.TextScaled = true
+
+			promptGui.Parent = plrgui
+			Remote.Send(v, "Function", "CustomKick")
+			task.delay(5, function()
+				if v.Parent == service.Players then
+					-- make sure they're really kicked
+					v:Kick("Unexpected Error")
+				end
+			end)
+			Functions.Hint(`Custom-kicking {service.FormatPlayer(v)}`, {plr})
+		end
+    end
+};
 
 		CustomMessage = {
 			Prefix = Settings.Prefix;

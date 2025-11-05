@@ -1341,6 +1341,15 @@ return function(Vargs, GetEnv)
 				Timestamp = os.time();
 			}
 
+			-- Ensure the shared warnings table always exists before inserting
+			if type(Core.Variables) ~= "table" then
+				Core.Variables = {}
+			end
+
+			if type(Core.Variables.Warnings) ~= "table" then
+				Core.Variables.Warnings = {}
+			end
+
 			table.insert(Core.Variables.Warnings, value)
 
 			Core.DoSave({

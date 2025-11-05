@@ -2628,6 +2628,204 @@ return function(Vargs, env)
 			end
 		};
 
+		ShiftStats = {
+			Prefix = Settings.Prefix;
+			Commands = {"shiftstats", "viewshiftstats"};
+			Args = {"player/userid"};
+			Description = "View shift statistics for any player (online or offline)";
+			AdminLevel = "Moderators";
+			Function = function(plr: Player, args: {string})
+				if not server.ShiftData then
+					return Functions.Hint("ShiftData module not available", {plr})
+				end
+
+				local target = args[1]
+				if not target then
+					return Functions.Hint("Usage: ;shiftstats <player/userid>", {plr})
+				end
+
+				local userId = tonumber(target)
+				local playerName = target
+
+				if not userId then
+					-- Try to get player from name
+					local players = service.GetPlayers(plr, target, {DontError = true, UseFakePlayer = true})
+					if #players > 0 then
+						userId = players[1].UserId
+						playerName = players[1].Name
+					else
+						-- Try to get userId from username
+						userId = Functions.GetUserIdFromNameAsync(target)
+						if userId then
+							playerName = target
+						else
+							return Functions.Hint(`Player '{target}' not found`, {plr})
+						end
+					end
+				else
+					-- Get name from userId
+					local success, name = pcall(service.Players.GetNameFromUserIdAsync, service.Players, userId)
+					if success then
+						playerName = name
+					end
+				end
+
+				local stats = server.ShiftData.GetFormattedStats(userId, playerName)
+				Remote.MakeGui(plr, "Output", {
+					Title = "Shift Statistics";
+					Message = stats;
+					RichText = true;
+				})
+			end
+		};
+
+		AllShiftStats = {
+			Prefix = Settings.Prefix;
+			Commands = {"allshiftstats", "viewallshiftstats"};
+			Args = {};
+			Description = "View all shift statistics from the datastore";
+			AdminLevel = "Moderators";
+			Function = function(plr: Player, args: {string})
+				if not server.ShiftData then
+					return Functions.Hint("ShiftData module not available", {plr})
+				end
+
+				local success, pages = pcall(function()
+					return service.DataStoreService:GetDataStore("Madonis_Shift_Data", "ShiftStats"):ListKeysAsync()
+				end)
+
+				if not success then
+					return Functions.Hint("Failed to retrieve shift stats from datastore", {plr})
+				end
+
+				local tab = {}
+				local count = 0
+				local totalTime = 0
+
+				while true do
+					local items = pages:GetCurrentPage()
+					for _, item in items do
+						local userId = tonumber(item.KeyName)
+						if userId then
+							local data = server.ShiftData.GetPlayerData(userId)
+							if data and data.TotalShifts > 0 then
+								count += 1
+								totalTime += data.TotalShiftTime
+								local name = "Unknown"
+								local success, result = pcall(service.Players.GetNameFromUserIdAsync, service.Players, userId)
+								if success then name = result end
+
+								table.insert(tab, {
+									Text = `{name} ({userId})`;
+									Desc = `Shifts: {data.TotalShifts} | Total Time: {server.ShiftData.FormatTime(data.TotalShiftTime)} | Last: {data.LastShiftDate}`;
+								})
+							end
+						end
+					end
+
+					if pages.IsFinished then
+						break
+					else
+						pages:AdvanceToNextPageAsync()
+					end
+				end
+
+				table.insert(tab, 1, `Total Records: {count}`)
+				table.insert(tab, 2, `Total Shift Time: {server.ShiftData.FormatTime(totalTime)}`)
+				table.insert(tab, 3, "―――――――――――――――――――――――")
+
+				Remote.MakeGui(plr, "List", {
+					Title = "All Shift Statistics";
+					Tab = tab;
+					TextSelectable = true;
+				})
+			end
+		};
+
+		ResetShiftStats = {
+			Prefix = Settings.Prefix;
+			Commands = {"resetshiftstats"};
+			Args = {"player/userid/all"};
+			Description = "Reset shift statistics for a player or all players";
+			AdminLevel = "Moderators";
+			Function = function(plr: Player, args: {string})
+				if not server.ShiftData then
+					return Functions.Hint("ShiftData module not available", {plr})
+				end
+
+				local target = args[1]
+				if not target then
+					return Functions.Hint("Usage: ;resetshiftstats <player/userid/all>", {plr})
+				end
+
+				if target:lower() == "all" then
+					local confirm = Remote.GetGui(plr, "YesNoPrompt", {
+						Title = "Confirm Reset";
+						Question = "Are you sure you want to reset ALL shift statistics? This cannot be undone!";
+					})
+
+					if confirm ~= "Yes" then
+						return Functions.Hint("Reset cancelled", {plr})
+					end
+
+					local success, pages = pcall(function()
+						return service.DataStoreService:GetDataStore("Madonis_Shift_Data", "ShiftStats"):ListKeysAsync()
+					end)
+
+					if not success then
+						return Functions.Hint("Failed to retrieve shift stats from datastore", {plr})
+					end
+
+					local count = 0
+					while true do
+						local items = pages:GetCurrentPage()
+						for _, item in items do
+							local userId = tonumber(item.KeyName)
+							if userId then
+								server.ShiftData.ResetPlayerData(userId)
+								count += 1
+							end
+						end
+
+						if pages.IsFinished then
+							break
+						else
+							pages:AdvanceToNextPageAsync()
+						end
+					end
+
+					Functions.Hint(`Reset shift stats for {count} players`, {plr})
+				else
+					local userId = tonumber(target)
+					local playerName = target
+
+					if not userId then
+						local players = service.GetPlayers(plr, target, {DontError = true, UseFakePlayer = true})
+						if #players > 0 then
+							userId = players[1].UserId
+							playerName = players[1].Name
+						else
+							userId = Functions.GetUserIdFromNameAsync(target)
+							if userId then
+								playerName = target
+							else
+								return Functions.Hint(`Player '{target}' not found`, {plr})
+							end
+						end
+					else
+						local success, name = pcall(service.Players.GetNameFromUserIdAsync, service.Players, userId)
+						if success then playerName = name end
+					end
+
+					if server.ShiftData.ResetPlayerData(userId) then
+						Functions.Hint(`Reset shift stats for {playerName}`, {plr})
+					else
+						Functions.Hint(`Failed to reset shift stats for {playerName}`, {plr})
+					end
+				end
+			end
+		};
+
 		Music = {
 			Prefix = Settings.Prefix;
 			Commands = {"music", "song", "playsong", "sound"};
