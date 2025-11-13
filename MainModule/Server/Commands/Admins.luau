@@ -69,124 +69,6 @@ return function(Vargs, env)
 			end
 		};
 
-		Crash = {
-			Prefix = Settings.Prefix;
-			Commands = {"crash"};
-			Args = {"player"};
-			Description = "Crashes the target player(s)";
-			AdminLevel = "Admins";
-			Function = function(plr: Player, args: {string}, data: {any})
-				for _, v in service.GetPlayers(plr, args[1], {IsKicking = true}) do
-					if Admin.CheckAuthority(plr, v, "crash") then
-						Remote.Send(v, "Function", "Crash")
-					end
-				end
-			end
-		};
-
-		CreateStarterScript = {
-			Prefix = Settings.Prefix;
-			Commands = {"starterscript", "clientstarterscript", "starterclientscript", "createstarterscript"};
-			Args = {"name", "code"};
-			Description = "Executes the given code on everyone's client upon respawn";
-			AdminLevel = "Admins";
-			NoFilter = true;
-			Function = function(plr: Player, args: {string})
-				assert(args[1], "Missing starter script name (argument #1)")
-				assert(args[2], "Missing LocalScript code (argument #2)")
-
-				local bytecode = Core.Bytecode(args[2])
-				assert(string.find(bytecode, "\27Lua"), `LocalScript unable to be created: {string.gsub(bytecode, "Loadstring%.LuaX:%d+:", "")}`)
-
-				local new = Core.NewScript("LocalScript", args[2], true)
-				new.Name = `[Adonis] {args[1]}`
-				new.Parent = service.StarterGui
-				new.Disabled = false
-				Functions.Hint("Created starter script", {plr})
-			end
-		};
-
-CustomKick = {
-    Prefix = Settings.Prefix;
-    Commands = {"ckick", "customkick", "customcrash"};
-    Args = {"player", "title", "message"};
-    Description = "Disconnects (crashes) the target player with a custom Roblox dialog";
-    AdminLevel = "Admins";
-    Function = function(plr: Player, args: {string})
-        assert(args[2] and args[3], "Argument(s) missing or nil")
-        
-        -- Parse title - allow quotes for multi-word titles
-        local rawTitle = args[2]
-        local titleStart = 2
-        
-        -- Check if title starts with a quote
-        if rawTitle:match('^"') or rawTitle:match("^'") then
-            -- Find the closing quote
-            local quoteChar = rawTitle:sub(1, 1)
-            local titleEnd = 2
-            
-            -- Search through args to find closing quote
-            for i = 2, #args do
-                local combined = table.concat({select(2, table.unpack(args))}, " ", 1, i - 1)
-                if combined:match(quoteChar .. "$") then
-                    titleEnd = i
-                    break
-                end
-            end
-            
-            -- Extract title from quoted args
-            rawTitle = table.concat({select(2, table.unpack(args))}, " ", 1, titleEnd - 1)
-            titleStart = titleEnd + 1
-        end
-        
-        -- Remove quotes from title
-        rawTitle = rawTitle:gsub('"', ""):gsub("'", "")
-        
-        -- Parse message - everything after title
-        local rawMsg = table.concat({select(titleStart, table.unpack(args))}, " ")
-        
-        -- Remove quotes from message
-        rawMsg = rawMsg:gsub('"', ""):gsub("'", "")
-        
-        -- Convert newline escapes
-        rawTitle = rawTitle:gsub("\\n", "\n")
-        rawMsg = rawMsg:gsub("\\n", "\n")
-        
-        -- Filter content
-        local title = service.BroadcastFilter(rawTitle, plr)
-        assert(title == rawTitle, "Title was filtered: " .. title)
-        
-        local msg = service.BroadcastFilter(rawMsg, plr)
-        assert(msg == rawMsg, "Message was filtered: " .. msg)
-        
-		for _, v in service.GetPlayers(plr, args[1], {IsKicking = true}) do
-			if not Admin.CheckAuthority(plr, v, "custom-kick") then
-				continue
-			end
-			local plrgui = v:FindFirstChildOfClass("PlayerGui")
-			if not plrgui then
-				Remote.MakeGui(plr, "Output", {
-					Message = `Failed to custom-kick {service.FormatPlayer(v)} (PlayerGui not found)`;
-				})
-				continue
-			end
-			local promptGui = Deps.Assets.RobloxPromptGui:Clone()
-			promptGui.promptOverlay.ErrorPrompt.TitleFrame.ErrorTitle.Text = title
-			promptGui.promptOverlay.ErrorPrompt.MessageArea.ErrorFrame.ErrorMessage.Text = msg
-			promptGui.promptOverlay.ErrorPrompt.MessageArea.ErrorFrame.ErrorMessage.TextScaled = true
-
-			promptGui.Parent = plrgui
-			Remote.Send(v, "Function", "CustomKick")
-			task.delay(5, function()
-				if v.Parent == service.Players then
-					-- make sure they're really kicked
-					v:Kick("Unexpected Error")
-				end
-			end)
-			Functions.Hint(`Custom-kicking {service.FormatPlayer(v)}`, {plr})
-		end
-    end
-};
 
 		CustomMessage = {
 			Prefix = Settings.Prefix;
@@ -280,7 +162,7 @@ CustomKick = {
 			Commands = {"gpucrash"};
 			Args = {"player"};
 			Description = "GPU crashes the target player(s)";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string}, data: {any})
 				for _, v in service.GetPlayers(plr, args[1], {IsKicking = true}) do
 					if Admin.CheckAuthority(plr, v, "GPU-crash") then
@@ -295,7 +177,7 @@ CustomKick = {
 			Commands = {"hardcrash"};
 			Args = {"player"};
 			Description = "Hard-crashes the target player(s)";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string}, data: {any})
 				for _, v in service.GetPlayers(plr, args[1], {IsKicking = true}) do
 					if Admin.CheckAuthority(plr, v, "hard-crash") then
@@ -343,51 +225,12 @@ CustomKick = {
 			Commands = {"lag", "fpslag"};
 			Args = {"player"};
 			Description = "Makes the target player(s)'s FPS drop";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string}, data: {any})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					if Admin.CheckAuthority(plr, v, "lag") then
 						Remote.Send(v, "Function", "SetFPS", 5.6)
 					end
-				end
-			end
-		};
-
-		LoadLocalScript = {
-			Prefix = Settings.Prefix;
-			Commands = {"cs", "cscript", "clientscript"};
-			Args = {"player", "code"};
-			Description = "Executes the given code on the client of the target player(s)";
-			AdminLevel = "Admins";
-			NoFilter = true;
-			Function = function(plr: Player, args: {string})
-				assert(Settings.CodeExecution, "CodeExecution must be enabled for this command to work")
-				assert(args[2], "Missing LocalScript code (argument #2)")
-
-				local bytecode = Core.Bytecode(args[2])
-				assert(string.find(bytecode, "\27Lua"), `LocalScript unable to be created: {string.gsub(bytecode, "Loadstring%.LuaX:%d+:", "")}`)
-
-				local new = Core.NewScript("LocalScript", `script.Parent = game:GetService('Players').LocalPlayer.PlayerScripts; {args[2]}`, true)
-				local function cloneScript(targetPlayer)
-					local playerName = if targetPlayer == plr then "your client" else service.FormatPlayer(targetPlayer)
-
-					local backpack = targetPlayer:FindFirstChildOfClass("Backpack")
-					if not backpack then
-						Functions.Hint(`Couldn't run LocalScript on {playerName} (Backpack missing?)`, {plr})
-						return
-					end
-
-					local cl = new:Clone()
-					cl.Name = "[Adonis] LocalScript"
-					cl.Disabled = true
-					cl.Parent = targetPlayer:FindFirstChildOfClass("Backpack")
-					task.wait(.1)
-					cl.Disabled = false
-					Functions.Hint(`Ran LocalScript on {playerName}`, {plr})
-				end
-
-				for i, v in service.GetPlayers(plr, args[1]) do
-					task.spawn(cloneScript, v)
 				end
 			end
 		};
@@ -412,7 +255,7 @@ CustomKick = {
 			Commands = {"loopkill"};
 			Args = {"player", "num (optional)"};
 			Description = "Repeatedly kills the target player(s)";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				local num = tonumber(args[2]) or 9999
 
@@ -433,46 +276,12 @@ CustomKick = {
 			end
 		};
 
-		MakeLocalScript = {
-			Prefix = Settings.Prefix;
-			Commands = {"ls", "localscript", "lscript"};
-			Args = {"code"};
-			Description = "Executes the given code on your client";
-			AdminLevel = "Admins";
-			NoFilter = true;
-			Function = function(plr: Player, args: {string})
-				Commands.LoadLocalScript.Function(plr, {`@{plr.Name}`, args[1]})
-			end
-		};
-
-		MakeScript = {
-			Prefix = Settings.Prefix;
-			Commands = {"s", "ss", "serverscript", "sscript", "script", "makescript"};
-			Args = {"code"};
-			Description = "Executes the given Lua code on the server";
-			AdminLevel = "Admins";
-			NoFilter = true;
-			CrossServerDenied = true;
-			Function = function(plr: Player, args: {string})
-				assert(Settings.CodeExecution, "CodeExecution config must be enabled for this command to work")
-				local bytecode = Core.Bytecode(assert(args[1], "Missing Script code (argument #2)"))
-				assert(string.find(bytecode, "\27Lua"), `Script unable to be created: {string.gsub(bytecode, "Loadstring%.LuaX:%d+:", "")}`)
-
-				local cl = Core.NewScript("Script", args[1], true)
-				cl.Name = "[Adonis] Script"
-				cl.Parent = service.ServerScriptService
-				task.wait()
-				cl.Disabled = false
-				Functions.Hint("Ran Script", {plr})
-			end
-		};
-
 		Moderator = {
 			Prefix = Settings.Prefix;
 			Commands = {"permmod", "pmod", "mod", "moderator", "pmoderator"};
 			Args = {"player/user"};
 			Description = "Makes the target player(s) a moderator; saves";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local senderLevel = data.PlayerData.Level
@@ -499,7 +308,7 @@ CustomKick = {
 			Args = {"name", "BrickColor"};
 			Filter = true;
 			Description = "Make a new team with the specified name and color";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				local teamName = assert(args[1], "Missing team name (argument #1)")
 				local teamColor = Functions.ParseBrickColor(args[2])
@@ -527,7 +336,7 @@ CustomKick = {
 			Args = {"player"};
 			Hidden = true;
 			Description = `Deletes the player forcefully, causing them to be kicked for "Player has been removed from the DataModel"`;
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				local sourcePlayerLevel = Admin.GetLevel(plr)
 				for _, v in service.GetPlayers(plr, args[1]) do
@@ -592,7 +401,7 @@ CustomKick = {
 			Commands = {"promptpremiumpurchase", "premiumpurchaseprompt"};
 			Args = {"player"};
 			Description = "Opens the Roblox Premium purchase prompt for the target player(s)";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					service.MarketplaceService:PromptPremiumPurchase(v)
@@ -605,7 +414,7 @@ CustomKick = {
 			Commands = {"ramcrash", "memcrash"};
 			Args = {"player"};
 			Description = "RAM-crashes the target player(s)";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string}, data: {any})
 				for _, v in service.GetPlayers(plr, args[1], {IsKicking = true}) do
 					if Admin.CheckAuthority(plr, v, "RAM-crash") then
@@ -615,33 +424,13 @@ CustomKick = {
 			end
 		};
 
-		RemoveStarterScript = {
-			Prefix = Settings.Prefix;
-			Commands = {"removestarterscript", "removeclientstarterscripts", "removestarterclientscripts", "unstarterscript"};
-			Args = {"name"};
-			Description = "Remove a starterscript";
-			AdminLevel = "Admins";
-			NoFilter = true;
-			Function = function(plr: Player, args: {string})
-				assert(args[1], "No starterscript name provided!")
-
-				for _,v : Instance in service.StarterGui:GetChildren() do
-					if v:IsA("LocalScript") and v.Name:find("[Adonis]") then
-						if v.Name:gsub("%[Adonis%] ", ""):lower() == args[1]:lower() or args[1]:lower() == "all" then
-							service.Delete(v)
-							Functions.Hint("Removed starter script "..v.Name, {plr})
-						end
-					end
-				end
-			end
-		};
 
 		RemoveTeam = {
 			Prefix = Settings.Prefix;
 			Commands = {"removeteam", "deleteteam"};
 			Args = {"name"};
 			Description = "Remove the specified team";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.Teams:GetTeams() do
 					if string.sub(string.lower(v.Name), 1, #args[1]) == string.lower(args[1]) then
@@ -663,7 +452,7 @@ CustomKick = {
 			Commands = {"restoremap", "maprestore", "rmap"};
 			Args = {};
 			Description = "Restore the map to the the way it was the last time it was backed up";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				local plrName = plr and service.FormatPlayer(plr) or "<SERVER>"
 
@@ -743,7 +532,7 @@ CustomKick = {
 			Commands = {"addtool", "savetool", "maketool"};
 			Args = {"optional player", "optional new tool name"};
 			Description = `Saves the equipped tool to the storage so that it can be inserted using {Settings.Prefix}give`;
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local tool = v.Character and v.Character:FindFirstChildWhichIsA("BackpackItem")
@@ -760,171 +549,6 @@ CustomKick = {
 			end
 		};
 
-		ScriptBuilder = {
-			Prefix = Settings.Prefix;
-			Commands = {"scriptbuilder", "scriptb", "sb"};
-			Args = {"create/remove/edit/close/clear/append/run/stop/list", "localscript/script", "scriptName", "data"};
-			Description = "[Deprecated] Script Builder; make a script, then edit it and chat it's code or use :sb append <codeHere>";
-			AdminLevel = "Admins";
-			Hidden = true;
-			NoFilter = true;
-			CrossServerDenied = true;
-			Function = function(plr: Player, args: {string})
-				assert(Settings.CodeExecution, "CodeExecution must be enabled for this command to work")
-				local sb = Variables.ScriptBuilder[tostring(plr.UserId)]
-				if not sb then
-					sb = {
-						Script = {};
-						LocalScript = {};
-						Events = {};
-					}
-					Variables.ScriptBuilder[tostring(plr.UserId)] = sb
-				end
-
-				local action = string.lower(args[1])
-				local class = args[2] or "LocalScript"
-				local name = args[3]
-
-				if string.lower(class) == "script" or string.lower(class) == "s" then
-					class = "Script"
-				elseif string.lower(class) == "clientscript" or string.lower(class) == "cs" then
-					class = "ClientScript"
-					--elseif string.lower(class) == "localscript" or string.lower(class) == "ls" then
-					--	class = "LocalScript"
-				else
-					class = "LocalScript"
-				end
-
-				if action == "create" then
-					assert(args[1] and args[2] and args[3], "Missing arguments")
-					local code = args[4] or " "
-
-					if sb[class][name] then
-						pcall(function()
-							sb[class][name].Script.Disabled = true
-							sb[class][name].Script:Destroy()
-						end)
-						if sb.ChatEvent then
-							sb.ChatEvent:Disconnect()
-						end
-					end
-
-					local wrapped,scr = Core.NewScript(class,code,false,true)
-
-					sb[class][name] = {
-						Wrapped = wrapped;
-						Script = scr;
-					}
-
-					if args[4] then
-						Functions.Hint(`Created {class} {name} and appended text`, {plr})
-					else
-						Functions.Hint(`Created {class} {name}`, {plr})
-					end
-				elseif action == "edit" then
-					assert(args[1] and args[2] and args[3], "Missing arguments")
-					if sb[class][name] then
-						local scr = sb[class][name].Script
-						local tab = Core.GetScript(scr)
-						if scr and tab then
-							sb[class][name].Event = plr.Chatted:Connect(function(msg)
-								if string.sub(msg, 1,#(`{Settings.Prefix}sb`)) ~= `{Settings.Prefix}sb` then
-									tab.Source ..= `\n{msg}`
-									Functions.Hint(`Appended message to {class} {name}`, {plr})
-								end
-							end)
-							Functions.Hint(`Now editing {class} {name}; Chats will be appended`, {plr})
-						end
-					else
-						error(`{class} {name} not found!`)
-					end
-				elseif action == "close" then
-					assert(args[1] and args[2] and args[3], "Missing arguments")
-					local scr = sb[class][name].Script
-					local tab = Core.GetScript(scr)
-					if sb[class][name] then
-						if sb[class][name].Event then
-							sb[class][name].Event:Disconnect()
-							sb[class][name].Event = nil
-							Functions.Hint(`No longer editing {class} {name}`, {plr})
-						end
-					else
-						error(`{class} {name} not found!`)
-					end
-				elseif action == "clear" then
-					assert(args[1] and args[2] and args[3], "Missing arguments")
-					local scr = sb[class][name].Script
-					local tab = Core.GetScript(scr)
-					if scr and tab then
-						tab.Source = " "
-						Functions.Hint(`Cleared {class} {name}`, {plr})
-					else
-						error(`{class} {name} not found!`)
-					end
-				elseif action == "remove" then
-					assert(args[1] and args[2] and args[3], "Missing arguments")
-					if sb[class][name] then
-						pcall(function()
-							sb[class][name].Script.Disabled = true
-							sb[class][name].Script:Destroy()
-						end)
-						if sb.ChatEvent then
-							sb.ChatEvent:Disconnect()
-							sb.ChatEvent = nil
-						end
-						sb[class][name] = nil
-					else
-						error(`{class} {name} not found!`)
-					end
-				elseif action == "append" then
-					assert(args[1] and args[2] and args[3] and args[4], "Missing arguments")
-					if sb[class][name] then
-						local scr = sb[class][name].Script
-						local tab = Core.GetScript(scr)
-						if scr and tab then
-							tab.Source ..= `\n{args[4]}`
-							Functions.Hint(`Appended message to {class} {name}`, {plr})
-						end
-					else
-						error(`{class} {name} not found!`)
-					end
-				elseif action == "run" then
-					assert(args[1] and args[2] and args[3], "Missing arguments")
-					if sb[class][name] then
-						if class == "LocalScript" then
-							sb[class][name].Script.Parent = plr:FindFirstChildOfClass("Backpack")
-						else
-							sb[class][name].Script.Parent = service.ServerScriptService
-						end
-						sb[class][name].Script.Disabled = true
-						task.wait(0.03)
-						sb[class][name].Script.Disabled = false
-						Functions.Hint(`Running {class} {name}`, {plr})
-					else
-						error(`{class} {name} not found!`)
-					end
-				elseif action == "stop" then
-					assert(args[1] and args[2] and args[3], "Missing arguments")
-					if sb[class][name] then
-						sb[class][name].Script.Disabled = true
-						Functions.Hint(`Stopped {class} {name}`, {plr})
-					else
-						error(`{class} {name} not found!`)
-					end
-				elseif action == "list" then
-					local tab = {}
-					for i, v in sb.Script do
-						table.insert(tab, {Text = `Script: {i}`, Desc = `Running: {v.Script.Disabled}`})
-					end
-
-					for i, v in sb.LocalScript do
-						table.insert(tab, {Text = `LocalScript: {i}`, Desc = `Running: {v.Script.Disabled}`})
-					end
-
-					Remote.MakeGui(plr, "List", {Title = "SB Scripts", Table = tab})
-				end
-			end
-		};
 
 		ServerLock = {
 			Prefix = Settings.Prefix;
@@ -950,7 +574,7 @@ CustomKick = {
 			Commands = {"setcoreguienabled", "setcoreenabled", "showcoregui", "setcoregui", "setcgui", "setcore", "setcge"};
 			Args = {"player", "All/Backpack/Chat/EmotesMenu/Health/PlayerList", "true/false"};
 			Description = "Enables or disables CoreGui elements for the target player(s)";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Function = function(plr: Player, args: {string})
 				assert(args[3], "Missing state (argument #3)")
 				local enable = if args[3]:lower() == "on" or args[3]:lower() == "true" then true else (if args[3]:lower() == "off" or args[3]:lower() == "false" then false else nil)
@@ -970,7 +594,7 @@ CustomKick = {
 			Commands = {"setlevel", "setadminlevel"};
 			Args = {"player", "level"};
 			Description = "Sets the target player(s) permission level for the current server; does not save";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local senderLevel = data.PlayerData.Level
@@ -1008,7 +632,7 @@ CustomKick = {
 			Commands = {"setrank", "permrank", "permsetrank"};
 			Args = {"player/user", "rank"};
 			Description = "Sets the admin rank of the target user(s); THIS SAVES!";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				assert(args[1], "Missing target user (argument #1)")
@@ -1053,7 +677,7 @@ CustomKick = {
 			Commands = {"settemprank", "temprank", "tempsetrank"};
 			Args = {"player", "rank"};
 			Description = `Identical to {Settings.Prefix}setrank, but doesn't save`;
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				assert(args[1], "Missing target player (argument #1)")
@@ -1164,30 +788,6 @@ CustomKick = {
 			end
 		};
 
-		StarterScripts = {
-			Prefix = Settings.Prefix;
-			Commands = {"starterscripts", "clientstarterscripts", "starterclientscripts"};
-			Args = {};
-			Description = "Show existing starterscripts";
-			AdminLevel = "Admins";
-			NoFilter = true;
-			Function = function(plr: Player, args: {string})
-				local result = {}
-
-				for _,v : Instance in service.StarterGui:GetChildren() do
-					if v:IsA("LocalScript") and v.Name:find("[Adonis]") then
-						table.insert(result, (v.Name:gsub("%[Adonis%] ", "")))
-					end
-				end
-
-
-				Remote.MakeGui(plr,"List",{
-					Title = "Starter Scripts";
-					Tab = result;
-				})
-			end
-		};
-
 		SystemMessage = {
 			Prefix = Settings.Prefix;
 			Commands = {"sm", "systemmessage", "sysmsg"};
@@ -1221,7 +821,7 @@ CustomKick = {
 			Commands = {"tempmod", "tmod", "tempmoderator", "tmoderator"};
 			Args = {"player"};
 			Description = "Makes the target player(s) a temporary moderator; does not save";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local senderLevel = data.PlayerData.Level
@@ -1244,7 +844,7 @@ CustomKick = {
 			Commands = {"tempunadmin", "untempadmin", "tunadmin", "untadmin"};
 			Args = {"player"};
 			Description = "Removes the target players' admin powers for this server; does not save";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local senderLevel = data.PlayerData.Level
@@ -1272,7 +872,7 @@ CustomKick = {
 			Commands = {"unadmin", "unmod", "unowner", "unpadmin", "unheadadmin", "unrank"};
 			Args = {"player/user / list entry", "temp? (true/false) (default: false)"};
 			Description = "Removes admin/moderator ranks from the target player(s); saves unless <temp> is 'true'";
-			AdminLevel = "Admins";
+			AdminLevel = "Creators";
 			Dangerous = true;
 			Function = function(plr: Player, args: {string}, data: {any})
 				local target = assert(args[1], "Missing target user (argument #1)")
@@ -1400,71 +1000,6 @@ CustomKick = {
 			end
 		};
 
-		Weather = {
-			Prefix = Settings.Prefix;
-			Commands = {"wa", "setweather", "weatheradmin", "weather"};
-			Args = {"type"};
-			Description = `Changes the weather to the specified type`;
-			AdminLevel = "Admins";
-			Function = function(plr: Player, args: {string})
-			if game.ReplicatedStorage:FindFirstChild("WeatherResources") and game.ReplicatedStorage.WeatherResources:FindFirstChild("Settings") and game.ReplicatedStorage.WeatherResources.Settings:FindFirstChild("AdminEvent") then
-				local Weather = {
-					"Auto",
-					"Sunny",
-					"Partly Cloudy",
-					"Mostly Cloudy",
-					"Cloudy",
-					"Drizzle",
-					"Freezing Drizzle",
-					"Flurries",
-					"Showers",
-					"Rain / Snow Showers",
-					"Snow Showers",
-					"Rain",
-					"Rain / Snow",
-					"Snow",
-					"Heavy Rain",
-					"Heavy Rain / Snow",
-					"Heavy Snow",
-					"Thunderstorms",
-					"Strong Thunderstorms",
-				}
-				local WeatherType
-				for _, weather in Weather do
-					if string.lower(weather) == string.lower(args[1]) then
-						WeatherType = weather
-						break
-					end
-				end
-				if WeatherType == nil and string.lower(args[1]) ~= "hurricane" then
-					Functions.Hint("Invalid weather type", {plr})
-					return
-				end
-
-				if TornadoEnabled == true then
-					if Admin.GetLevel(plr) < 1000 then
-						Functions.Hint("You do not have permission to use this weather type on an Active Hurricane", {plr})
-						return
-					end
-					game.Workspace:FindFirstChild("Tornado"):Destroy()
-					TornadoEnabled = false
-				end
-				if string.lower(args[1]) == "hurricane" then
-					if Admin.GetLevel(plr) < 1000 then
-						Functions.Hint("You do not have permission to use this weather type", {plr})
-						return
-					end
-					TornadoEnabled = true
-					local Tornado = game.ReplicatedStorage:WaitForChild("Tornado"):Clone()
-					game.ReplicatedStorage:WaitForChild("WeatherResources"):WaitForChild("Settings"):WaitForChild("AdminEvent"):FireClient(plr, "Weather", "Strong Thunderstorms")
-					Tornado.Parent = game.Workspace
-					Functions.Hint("Hurricane spawned. Head to the Whitehouse to enable the siren.", {plr})
-				else
-					game.ReplicatedStorage:WaitForChild("WeatherResources"):WaitForChild("Settings"):WaitForChild("AdminEvent"):FireClient(plr, "Weather", WeatherType) --WeatherResources.Settings.AdminEvent:FireServer("Weather", WeatherType)
-				end
-			end
-		end
-		};
 
 		Whitelist = {
 			Prefix = Settings.Prefix;

@@ -498,6 +498,7 @@ return function(Vargs, GetEnv)
 				"help",
 				"cmds",
 				"requesthelp", 
+				"freecam",
 				"gethelp", 
 				"lifealert", 
 				"sos"
