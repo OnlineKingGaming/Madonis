@@ -134,16 +134,16 @@ return function(Vargs, env)
 			end
 		};
 
-Paint = {
-	Prefix = Settings.PlayerPrefix;
-	Commands = {"paint", "canvas", "draw"};
-	Args = {};
-	Description = "Opens a canvas window for you to draw on";
-	AdminLevel = "Players";
-	Function = function(plr, args)
-		Remote.MakeGui(plr, "Paint", {})
-	end
-};
+		Paint = {
+			Prefix = Settings.PlayerPrefix;
+			Commands = {"paint", "canvas", "draw"};
+			Args = {};
+			Description = "Opens a canvas window for you to draw on";
+			AdminLevel = "Players";
+			Function = function(plr, args)
+				Remote.MakeGui(plr, "Paint", {})
+			end
+		};
 
 		Prefix = {
 			Prefix = "!";
@@ -297,17 +297,6 @@ Paint = {
 			end
 		};
 
-		GetScript = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"getscript", "getadonis"};
-			Args = {};
-			Description = "Prompts you to take a copy of the script";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				service.MarketPlace:PromptPurchase(plr, Core.LoaderID)
-			end
-		};
-
 		ClientPerfStats = {
 			Prefix = Settings.PlayerPrefix;
 			Commands = {"cstats", "clientperformance", "clientperformanceststs", "clientstats", "ping", "latency", "fps","framespersecond"};
@@ -399,7 +388,8 @@ Paint = {
 
 							for _, p in service.Players:GetPlayers() do
 								Routine(function()
-									if Admin.CheckAdmin(p) and plr.Name ~= p.Name then
+									local level, rank = Admin.GetLevel(p)
+									if level >= 100 and plr.Name ~= p.Name then
 										local ret = Remote.MakeGuiGet(p, "Notification", {
 											Title = "Help Request";
 											Message = `{plr.Name} needs help! Reason: {pending.Reason}`;
@@ -448,106 +438,6 @@ Paint = {
 				service.TeleportService:TeleportAsync(game.PlaceId, {plr}, service.New("TeleportOptions", {
 					ServerInstanceId = game.JobId
 				}))
-			end
-		};
-
-		Join = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"join", "follow", "followplayer"};
-			Args = {"username"};
-			Description = "Makes you follow the player you gave the username of to the server they are in";
-			NoStudio = true; -- TeleportService cannot be used in Roblox Studio
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				assert(args[1], "Argument #1 (username) is required")
-				assert(#args[1] <= 20 and args[1]:match("^[%a%d_]+$"), "Invalid username provided")
-
-				local UserId = Functions.GetUserIdFromNameAsync(args[1])
-				if UserId then
-					local success, samePlace, errorMessage, placeId, jobId = pcall(service.TeleportService.GetPlayerPlaceInstanceAsync, service.TeleportService, UserId)
-
-					if success then
-						if samePlace then
-							error("You're already in this server!")
-						end
-
-						if placeId and jobId then
-							service.TeleportService:TeleportAsync(placeId, {plr}, service.New("TeleportOptions", {
-								ServerInstanceId = jobId
-							}))
-							Functions.Hint("Teleporting...", {plr})
-						else
-							Functions.Hint(`{service.Players:GetNameFromUserIdAsync(UserId)} was not found playing this game`, {plr})
-						end
-					else
-						Functions.Hint(`Unexpected internal error: {errorMessage or samePlace}`, {plr})
-					end
-				else
-					Functions.Hint(`'{args[1]}' is not a valid Roblox user`, {plr})
-				end
-			end
-		};
-
-		GlobalJoin = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"joinfriend", "globaljoin"};
-			Args = {"username"};
-			Description = "Joins your friend outside/inside of the game (must be online)";
-			NoStudio = true;
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string}) -- uses Player:GetFriendsOnline()
-				--// NOTE: MAY NOT WORK IF "ALLOW THIRD-PARTY GAME TELEPORTS" (GAME SECURITY PERMISSION) IS DISABLED
-
-				assert(args[1], "Argument #1 (username) is required")
-				assert(#args[1] <= 20 and args[1]:match("^[%a%d_]+$"), "Invalid username provided")
-
-				local UserId = Functions.Functions.GetUserIdFromNameAsync(args[1])
-				if UserId then
-					for _, v in plr:GetFriendsOnline() do
-						if v.VisitorId == UserId then
-							if v.IsOnline and v.PlaceId and v.GameId then
-								service.TeleportService:TeleportAsync(v.PlaceId, {plr})
-								Functions.Hint(string.format("Joining %s (%s)...", v.UserName, v.LastLocation or "unknown game"), {plr})
-							else
-								Functions.Hint("{v.UserName} is not currently playing a game", {plr})
-							end
-
-							return
-						end
-					end
-
-					Functions.Hint("You are not a friend of the specified user", {plr})
-				else
-					Functions.Hint(`'{args[1]}' is not a valid Roblox user`, {plr})
-				end
-			end
-		};
-
-		Credits = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"credit", "credits"};
-			Args = {};
-			Description = "Shows you Adonis development credits";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "Credits")
-			end
-		};
-
-		ChangeLog = {
-			Prefix = Settings.Prefix;
-			Commands = {"changelog", "changes", "updates", "version"};
-			Args = {};
-			Description = "Shows you the script's changelog";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "List", {
-					Title = "Change Log";
-					Icon = server.MatIcons["Text snippet"];
-					Table = server.FormattedChangelog;
-					RichText = true;
-					Size = {500, 400};
-				})
 			end
 		};
 
@@ -619,52 +509,6 @@ Paint = {
 					Size = {300, 250};
 					RichText = true;
 				})
-			end
-		};
-
-		UserPanel = {
-			Prefix = "";
-			Commands = {":userpanel"};
-			Args = {};
-			Hidden = true;
-			Description = "Backup command for opening the userpanel window";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "UserPanel", {Tab = "Info";})
-			end
-		};
-
-		Theme = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"theme", "usertheme"};
-			Args = {"theme name (leave blank to reset to default)"};
-			Hidden = true;
-			Description = "Changes the Adonis client UI theme";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				local playerData = Core.GetPlayer(plr)
-				local data = playerData.Client or {}
-				data.CustomTheme = args[1]
-				playerData.Client = data
-				Core.SavePlayer(plr, playerData)
-				Remote.MakeGui(plr, "Notification", {
-					Title = "Theme Changed";
-					Icon = server.MatIcons.Palette;
-					Message = if args[1] then `UI theme set to '{args[1]}'!` else `UI theme reset to default.`;
-					Time = 5;
-				})
-				Remote.LoadCode(plr, `client.Variables.CustomTheme = {if args[1] then `[[{args[1]}]]` else "nil"}`)
-			end
-		};
-
-		ScriptInfo = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"info", "about", "userpanel", "script", "scriptinfo"};
-			Args = {};
-			Description = "Shows info about the admin system (Adonis)";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				Remote.MakeGui(plr, "UserPanel", {Tab = "Info";})
 			end
 		};
 
@@ -776,17 +620,6 @@ Paint = {
 				for _, v: Player in service.GetPlayers(plr, args[1], {UseFakePlayer = true}) do
 					Remote.LoadCode(plr, `service.GuiService:InspectPlayerFromUserId({v.UserId})`)
 				end
-			end
-		};
-
-		DevConsole = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"devconsole", "developerconsole", "opendevconsole"};
-			Args = {};
-			Description = "Opens the Roblox developer console";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				Remote.Send(plr, "Function", "SetCore", "DevConsoleVisible", true)
 			end
 		};
 
@@ -1167,28 +1000,6 @@ Paint = {
 					Icon = server.MatIcons.Language;
 					Table = list;
 				})
-			end
-		};
-
-		BuyItem = {
-			Prefix = Settings.PlayerPrefix;
-			Commands = {"buyitem", "buyasset"};
-			Args = {"id"};
-			Description = "Prompts yourself to buy the asset belonging to the ID supplied";
-			AdminLevel = "Players";
-			Function = function(plr: Player, args: {string})
-				local assetId = assert(tonumber(args[1]), "Missing asset ID (argument #1)")
-				local success, assetAlreadyOwned = pcall(service.MarketplaceService.PlayerOwnsAsset, service.MarketplaceService, plr, assetId)
-				assert(not (success and assetAlreadyOwned), "You already own the asset!")
-				local success, assetInfo = pcall(service.MarketplaceService.GetProductInfo, service.MarketplaceService, assetId)
-				assert(success and not assetInfo.IsLimited, "Cannot buy limited assets!")
-				local connection; connection = service.MarketplaceService.PromptPurchaseFinished:Connect(function(_, boughtAssetId, isPurchased)
-					if boughtAssetId == assetId then
-						connection:Disconnect()
-						Functions.Notification("Adonis purchase", (isPurchased and string.format("Asset %d was purchased successfully!", assetId) or string.format("Asset %d was not bought", assetId)), {plr}, 10, "MatIcon://Shopping cart")
-					end
-				end)
-				service.MarketplaceService:PromptPurchase(plr, assetId, false)
 			end
 		};
 

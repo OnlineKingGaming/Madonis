@@ -153,7 +153,7 @@ return function(Vargs, GetEnv)
 		Description = "Restarts the server";
 		Filter = true;
 		NoStudio = true; --// TeleportService does not work in Studio
-		AdminLevel = "Admins";
+		AdminLevel = 200;
 		Function = function(plr: Player, args: {string})
 			if #Players:GetPlayers() == 0 then return end
 

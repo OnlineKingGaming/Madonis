@@ -170,7 +170,7 @@ return function(Vargs, GetEnv)
 		Args = {};
 		Description = "Shows bans synced from Trello.";
 		TrelloRequired = true;
-		AdminLevel = "Moderators";
+		AdminLevel = 100;
 		ListUpdater = function(plr: Player)
 			local tab = table.create(#HTTP.Trello.Bans)
 			for _, banData in HTTP.Trello.Bans do
@@ -207,7 +207,7 @@ return function(Vargs, GetEnv)
 		Filter = true;
 		CrossServerDenied = true;
 		TrelloRequired = true;
-		AdminLevel = "Admins";
+		AdminLevel = 200;
 		Function = function(plr: Player, args: {string}, data: {any})
 			local trello = HTTP.Trello.API
 			if not Settings.Trello_Enabled or trello == nil then

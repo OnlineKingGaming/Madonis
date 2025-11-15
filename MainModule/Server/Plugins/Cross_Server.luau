@@ -220,7 +220,7 @@ return function(Vargs, GetEnv)
 		Commands = {"serverlist", "gameservers", "crossserverlist", "listservers"};
 		Args = {"autoupdate? (default: true)"};
 		Description = "Attempts to list all active servers (at the time the command was ran)";
-		AdminLevel = "Admins";
+		AdminLevel = 200;
 		CrossServerDenied = true;
 		IsCrossServer = true;
 		Function = function(plr: Player, args: {string})
@@ -294,7 +294,7 @@ return function(Vargs, GetEnv)
 		Args = {"answer1,answer2,etc (NO SPACES)", "question"};
 		Filter = true;
 		Description = "Lets you ask players in all servers a question with a list of answers and get the results";
-		AdminLevel = "Moderators";
+		AdminLevel = 100;
 		CrossServerDenied = true;
 		IsCrossServer = true;
 		Function = function(plr: Player, args: {string})

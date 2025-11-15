@@ -21,7 +21,7 @@ return function(Vargs, GetEnv)
 		Commands = {"rebootadonis", "reloadadonis"};
 		Args = {};
 		Description = "Attempts to force Adonis to reload";
-		AdminLevel = "Creators";
+		AdminLevel = 900;
 		Function = function(plr: Player, args: {string}, data: {any})
 			local rebootHandler = server.Deps.RebootHandler:Clone();
 
@@ -117,7 +117,7 @@ return function(Vargs, GetEnv)
 		NoFilter = true;
 		Debug = true;
 		Description = "Test out Roblox's text filtering on a player";
-		AdminLevel = "Moderators";
+		AdminLevel = 100;
 		Function = function(plr: Player, args: {string})
 			assert(args[1], "Missing player name")
 			assert(args[2], "Missing text to filter")
@@ -144,7 +144,7 @@ return function(Vargs, GetEnv)
 		Hidden = true;
 		Debug = true;
 		NoFilter = true;
-		AdminLevel = "Creators";
+		AdminLevel = 900;
 		Function = function(plr: Player, args: {string})
 			local ScriptSrcTxt = ""
 			Remote.MakeGui(plr, "Notepad", {
@@ -268,7 +268,7 @@ local service = wrappedEnv.Service
 		Description = "Test Big List";
 		Hidden = true;
 		Debug = true;
-		AdminLevel = "Admins";
+		AdminLevel = 200;
 		Function = function(plr: Player, args: {string})
 			local list = {}
 
@@ -309,7 +309,7 @@ local service = wrappedEnv.Service
 		Description = "Remote Test";
 		Hidden = true;
 		Debug = true;
-		AdminLevel = "Creators";
+		AdminLevel = 900;
 		Function = function(plr: Player, args: {string})
 			print(Remote.Get(plr,"Test"))
 
@@ -373,7 +373,7 @@ local service = wrappedEnv.Service
 		Hidden = true;
 		Debug = true;
 		NoFilter = true;
-		AdminLevel = "Creators";
+		AdminLevel = 900;
 		Function = function(plr: Player, args: {string})
 			--[[local ans = Remote.GetGui(plr, "YesNoPrompt", {
 				Icon = server.MatIcons.Warning;
@@ -418,7 +418,7 @@ local service = wrappedEnv.Service
 		Hidden = true;
 		Debug = true;
 		NoFilter = true;
-		AdminLevel = "Moderators";
+		AdminLevel = 100;
 		Function = function(plr: Player, args: {string})
 			local useIds = args[2] and string.lower(args[2]) == "true"
 
@@ -436,7 +436,7 @@ local service = wrappedEnv.Service
 		Hidden = true;
 		Debug = true;
 		NoFilter = true;
-		AdminLevel = "Moderators";
+		AdminLevel = 100;
 		Function = function(plr: Player, args: {string})
 			local useIds = args[2] and string.lower(args[2]) == "true"
 
