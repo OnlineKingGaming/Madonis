@@ -3693,12 +3693,39 @@ return function(Vargs, env)
 			end
 		};
 
+		Freecam = {
+			Prefix = Settings.Prefix;
+			Commands = {"freecam"};
+			Args = {"player"};
+			Description = "Gives the target player(s) the Freecam UI so they can toggle it with Shift+E, F, or DPadLeft";
+			AdminLevel = 100;
+			Function = function(plr: Player, args: {string})
+				local template = Deps.Assets and Deps.Assets.Freecam
+				assert(template, "Freecam asset missing")
+
+				for _, target: Player in service.GetPlayers(plr, args[1] or "me") do
+					local plrgui = target:FindFirstChildOfClass("PlayerGui")
+					if plrgui and not plrgui:FindFirstChild("Freecam") then
+						local freecam = template:Clone()
+						freecam.Enabled = true
+						freecam.ResetOnSpawn = false
+						local controller = freecam:FindFirstChild("Freecam")
+						if controller and controller:IsA("LocalScript") then
+							controller.Disabled = false
+						end
+						freecam.Parent = plrgui
+						Functions.Notification("Notification", "Freecam enabled. Press Shift+E, F, or DPadLeft to toggle.", {target}, 15)
+					end
+				end
+			end
+		};
+
 		ToggleFreecam = {
 			Prefix = Settings.Prefix;
 			Commands = {"togglefreecam"};
 			Args = {"player"};
 			Description = "Toggles Freecam";
-			AdminLevel = "Tester";
+			AdminLevel = 100;
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local plrgui = v:FindFirstChildOfClass("PlayerGui")
@@ -3936,7 +3963,7 @@ return function(Vargs, env)
 			Commands = {"unfreecam"};
 			Args = {"player"};
 			Description = "UnFreecam";
-			AdminLevel = "Tester";
+			AdminLevel = 100;
 			Function = function(plr: Player, args: {string})
 				for _, v in service.GetPlayers(plr, args[1]) do
 					local plrgui = v:FindFirstChildOfClass("PlayerGui")

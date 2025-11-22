@@ -14,7 +14,7 @@ return function(Vargs, GetEnv)
 	]]
 	local isShuttingDown = false
 	local Commands, Decrypt, Encrypt, AddLog, TrackTask, Pcall
-	local Functions, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Settings, Defaults
+	local Functions, Admin, Anti, Core, HTTP, Logs, Remote, Process, Variables, Settings, Defaults, Deps
 	local logError = env.logError
 	local Routine = env.Routine
 	local function Init()
@@ -29,6 +29,7 @@ return function(Vargs, GetEnv)
 		Variables = server.Variables;
 		Settings = server.Settings;
 		Defaults = server.Defaults;
+		Deps = server.Deps;
 		isIngame = {}
 
 		logError = logError or env.logError;
@@ -96,6 +97,54 @@ return function(Vargs, GetEnv)
 		Process.Init = nil
 		AddLog("Script", "Processing Module Initialized")
 	end;
+
+	local function AutoGiveFreecam(p: Player)
+		local requiredSetting = Settings.AutoFreecamRank
+		if not requiredSetting then
+			return
+		end
+
+		local requiredLevel = if type(requiredSetting) == "number"
+			then requiredSetting
+			else Admin.StringToComLevel(requiredSetting)
+
+		if type(requiredLevel) ~= "number" then
+			return
+		end
+
+		local playerLevel = Admin.GetLevel(p) or 0
+		if playerLevel < requiredLevel then
+			return
+		end
+
+		local assets = Deps and Deps.Assets
+		local freecamTemplate = assets and assets.Freecam
+		if not freecamTemplate then
+			return
+		end
+
+		task.spawn(function()
+			local playerGui = p:FindFirstChildOfClass("PlayerGui") or p:WaitForChild("PlayerGui", 10)
+			if not playerGui or playerGui:FindFirstChild("Freecam") then
+				return
+			end
+
+			local freecam = freecamTemplate:Clone()
+			freecam.Enabled = true
+			freecam.ResetOnSpawn = false
+			local controller = freecam:FindFirstChild("Freecam")
+			if controller and controller:IsA("LocalScript") then
+				controller.Disabled = false
+			end
+			freecam.Parent = playerGui
+			Functions.Notification(
+				"Notification",
+				"Freecam enabled. Press Shift+E, F, or DPadLeft to toggle.",
+				{p},
+				15
+			)
+		end)
+	end
 
 	local function RunAfterPlugins(data)
 		local existingPlayers = service.Players:GetPlayers()
@@ -659,6 +708,11 @@ return function(Vargs, GetEnv)
 					-- Send to webhook in real time
 					if session.Webhook and session.Webhook ~= "" then
 						task.spawn(function()
+						
+							local remaining = session.EndTime - os.time()
+							local minutes = math.floor(remaining / 60)
+							local seconds = remaining % 60
+						
 							local payload = {
 								username = "Adonis Training Monitor",
 								embeds = {
@@ -668,22 +722,22 @@ return function(Vargs, GetEnv)
 										fields = {
 											{
 												name = "Trainee",
-												value = `{p.DisplayName} (@{p.Name})`,
+												value = string.format("%s (@%s)", p.DisplayName, p.Name),
 												inline = true
 											},
 											{
 												name = "Supervisor",
-												value = `{session.Supervisor.DisplayName} (@{session.Supervisor.Name})`,
+												value = string.format("%s (@%s)", session.Supervisor.DisplayName, session.Supervisor.Name),
 												inline = true
 											},
 											{
 												name = "Command",
-												value = `\`{matched}{Settings.SplitKey}{table.concat(args, Settings.SplitKey)}\``,
+												value = string.format("`%s%s%s`", matched, Settings.SplitKey, table.concat(args, Settings.SplitKey)),
 												inline = false
 											},
 											{
 												name = "Time Remaining",
-												value = `{math.floor((session.EndTime - os.time()) / 60)}m {(session.EndTime - os.time()) % 60}s`,
+												value = string.format("%dm %ds", minutes, seconds),
 												inline = true
 											},
 											{
@@ -696,12 +750,17 @@ return function(Vargs, GetEnv)
 									}
 								}
 							}
-							
+						
 							pcall(function()
-								service.HttpService:PostAsync(session.Webhook, service.HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
+								service.HttpService:PostAsync(
+									session.Webhook,
+									service.HttpService:JSONEncode(payload),
+									Enum.HttpContentType.ApplicationJson
+								)
 							end)
 						end)
 					end
+
 					
 					-- Update supervisor's monitoring GUI without recreating the window
 					if session.Supervisor and session.Supervisor.Parent then
@@ -1460,6 +1519,8 @@ return function(Vargs, GetEnv)
 				})
 			end
 
+			AutoGiveFreecam(p)
+
 			--// Start keybind listener
 			Remote.Send(p, "Function", "KeyBindListener", PlayerData.Keybinds or {})
 
@@ -1518,7 +1579,7 @@ return function(Vargs, GetEnv)
 					end
 				else
 					--// probably could make this RefreshGui instead of MakeGui down the road
-					if Settings.Console and (not Settings.Console_AdminsOnly or level > 0) then
+					if Settings.Console and (not Settings.Console_AdminsOnly or level > 100) then
 						Remote.MakeGui(p, "Console")
 					end
 
