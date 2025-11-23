@@ -1148,60 +1148,6 @@ return function(Vargs, GetEnv)
 					Anti.Detected(p, "info", `Invalid PrivateMessage ticket! Got: {args[2]}`)
 				end
 			end;
-
-			SaveScript = function(p: Player, args: {})
-				local se = Variables.ScriptEditor[tostring(p.UserId)]
-				-- Ignore the request
-				if not se then
-					return
-				end
-				local Name = args[1]["Name"]
-				local Variable = se[Name]
-
-				Variable.Script = args[1]["Text"]
-			end,
-			RunScript = function(p: Player, args: {})
-				local adminLevel = Admin.GetLevel(p)
-
-				local command = Commands.ScriptEditor
-				-- This is redundant because the only way to gain an entry in Variables.ScriptEditor is to have the command run on yourself
-				-- However, better safe than sorry!
-				if command and Admin.CheckComLevel(adminLevel, command.AdminLevel) then
-					local se = Variables.ScriptEditor[tostring(p.UserId)]
-					-- Ignore the request
-					if not se then
-						return
-					end
-					local Name = args[1][1]
-					local Variable = se[Name]
-
-					local oError = error
-					local newenv = GetEnv(getfenv(), {
-						print = function(...) local args = table.pack(...) for i = 1, args.n do args[i] = tostring(args[i]) end Remote.Terminal.LiveOutput(p, `PRINT: {table.concat(args, " ")}`) end;
-						warn = function(...) local args = table.pack(...) for i = 1, args.n do args[i] = tostring(args[i]) end Remote.Terminal.LiveOutput(p, `WARN: {table.concat(args, " ")}`) end;
-						error = function(reason, level)
-							if level ~= nil and type(level) ~= "number" then
-								oError(string.format("bad argument #2 to 'error' (number expected, got %s)", type(level)), 2)
-							end
-
-							Remote.MakeGui(p, "Output", {Title = 'LUA_DEMAND_ERROR'; Message = `{reason}`})
-							oError(`Adonis ScriptEditor error: {reason}`, (level or 1) + 1)
-						end;
-					})
-
-					-- TODO: Maybe make it not work with the server Env?
-					service.TrackTask(`Thread: ScriptEditor: {p.UserId}: {Name}`, function()
-						local func, err = Core.Loadstring(Variable["Script"], newenv)
-						if func then
-							xpcall(func, function(reason)
-								Remote.MakeGui(p, "Output", {Title = "LUA_ERROR"; Message = reason})
-							end)
-						else
-							Remote.MakeGui(p, "Output", {Title = "SYNTAX_ERROR"; Message = err})
-						end
-					end)
-				end
-			end,
 		};
 
 		NewSession = function(sessionType: string)
